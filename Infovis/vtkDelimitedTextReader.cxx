@@ -398,6 +398,10 @@ vtkDelimitedTextReader::vtkDelimitedTextReader() :
   this->StringDelimiter='"';
   this->UseStringDelimiter = true;
   this->DetectNumericColumns = false;
+  this->ForceDouble = false;
+  this->DefaultIntegerValue = 0;
+  this->DefaultDoubleValue = 0.0;
+  this->TrimWhitespacePriorToNumericConversion = false;
 }
 
 vtkDelimitedTextReader::~vtkDelimitedTextReader()
@@ -436,6 +440,14 @@ void vtkDelimitedTextReader::PrintSelf(ostream& os, vtkIndent indent)
      << (this->UseStringDelimiter ? "true" : "false") << endl;
   os << indent << "DetectNumericColumns: "
     << (this->DetectNumericColumns? "true" : "false") << endl;
+  os << indent << "ForceDouble: "
+    << (this->ForceDouble ? "true" : "false") << endl;
+  os << indent << "DefaultIntegerValue: "
+    << this->DefaultIntegerValue << endl;
+  os << indent << "DefaultDoubleValue: "
+    << this->DefaultDoubleValue << endl;
+  os << indent << "TrimWhitespacePriorToNumericConversion: "
+    << (this->TrimWhitespacePriorToNumericConversion ? "true" : "false") << endl;
   os << indent << "GeneratePedigreeIds: "
     << this->GeneratePedigreeIds << endl;
   os << indent << "PedigreeIdArrayName: "
@@ -569,9 +581,12 @@ int vtkDelimitedTextReader::RequestData(
       char tstring[2];
       tstring[1] = '\0';
       tstring[0] = this->StringDelimiter;
-      this->SetUnicodeFieldDelimiters(
-            vtkUnicodeString::from_utf8(this->FieldDelimiterCharacters));
-      this->SetUnicodeStringDelimiters(vtkUnicodeString::from_utf8(tstring));
+      // don't use Set* methods since they change the MTime in
+      // RequestData() !!!!!
+      this->UnicodeFieldDelimiters =
+            vtkUnicodeString::from_utf8(this->FieldDelimiterCharacters);
+      this->UnicodeStringDelimiters =
+        vtkUnicodeString::from_utf8(tstring);
       this->UnicodeOutputArrays = false;
       transCodec = vtkTextCodecFactory::CodecToHandle(file_stream);
       }
@@ -635,14 +650,18 @@ int vtkDelimitedTextReader::RequestData(
 
     if (this->DetectNumericColumns && !this->UnicodeOutputArrays)
       {
-      vtkStringToNumeric* convertor = vtkStringToNumeric::New();
+      vtkStringToNumeric* converter = vtkStringToNumeric::New();
+      converter->SetForceDouble(this->ForceDouble);
+      converter->SetDefaultIntegerValue(this->DefaultIntegerValue);
+      converter->SetDefaultDoubleValue(this->DefaultDoubleValue);
+      converter->SetTrimWhitespacePriorToNumericConversion(this->TrimWhitespacePriorToNumericConversion);
       vtkTable* clone = output_table->NewInstance();
       clone->ShallowCopy(output_table);
-      convertor->SetInput(clone);
-      convertor->Update();
+      converter->SetInput(clone);
+      converter->Update();
       clone->Delete();
-      output_table->ShallowCopy(convertor->GetOutputDataObject(0));
-      convertor->Delete();
+      output_table->ShallowCopy(converter->GetOutputDataObject(0));
+      converter->Delete();
       }
 
     }

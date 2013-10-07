@@ -1,8 +1,14 @@
+# Always add these tests
+SET(MyTests
+  TestCenterOfMass.cxx
+  )
+
 # if we have rendering add the following tests
 IF (VTK_USE_RENDERING AND VTK_USE_DISPLAY)
   SET(KIT Graphics)
   # add tests that do not require data
   SET(MyTests
+    ${MyTests}
     Mace.cxx
     expCos.cxx
     BoxClipTriangulate.cxx
@@ -20,6 +26,7 @@ IF (VTK_USE_RENDERING AND VTK_USE_DISPLAY)
     TestClipHyperOctree.cxx
     TestConvertSelection.cxx
     TestDelaunay2D.cxx
+    TestGlyph3D.cxx
     TestExtraction.cxx
     TestExtractSelection.cxx
     TestExtractSurfaceNonLinearSubdivision.cxx
@@ -28,6 +35,7 @@ IF (VTK_USE_RENDERING AND VTK_USE_DISPLAY)
     TestHyperOctreeDual.cxx
     TestHyperOctreeSurfaceFilter.cxx
     TestHyperOctreeToUniformGrid.cxx
+    TestImageDataToPointSet.cxx
     TestLineSource.cxx
     TestMapVectorsAsRGBColors.cxx
     TestMapVectorsToColors.cxx
@@ -37,11 +45,16 @@ IF (VTK_USE_RENDERING AND VTK_USE_DISPLAY)
     TestPolyDataPointSampler.cxx
     TestPolyhedron0.cxx
     TestPolyhedron1.cxx
+    TestQuadRotationalExtrusion.cxx
+    TestRectilinearGridToPointSet.cxx
+    TestReflectionFilter.cxx
+    TestRotationalExtrusion.cxx
     TestSelectEnclosedPoints.cxx
     TestTessellatedBoxSource.cxx
     TestTessellator.cxx
     TestUncertaintyTubeFilter.cxx
     TestDecimatePolylineFilter.cxx
+    TestImplicitPolyDataDistance.cxx
     )
 
   IF(VTK_USE_BOOST)
@@ -84,10 +97,16 @@ IF (VTK_USE_RENDERING AND VTK_USE_DISPLAY)
       TestIncrementalOctreePointLocator.cxx
       TestMultiBlock.cxx
       TestQuadraturePoints.cxx
+      TestQuadRotationalExtrusionMultiBlock.cxx
       TestUnstructuredGridGeometryFilter.cxx
       UnstructuredGridGradients.cxx
       UnstructuredGridCellGradients.cxx
       UnstructuredGridFastGradients.cxx
+      TestBooleanOperationPolyDataFilter.cxx
+      TestBooleanOperationPolyDataFilter2.cxx
+      TestDistancePolyDataFilter.cxx
+      TestIntersectionPolyDataFilter.cxx
+      TestYoungsMaterialInterface.cxx
       )
     IF (VTK_USE_PARALLEL)
       SET(MyTests ${MyTests}
@@ -95,8 +114,9 @@ IF (VTK_USE_RENDERING AND VTK_USE_DISPLAY)
         )
     ENDIF (VTK_USE_PARALLEL)
   ENDIF (VTK_DATA_ROOT)
-  CREATE_TEST_SOURCELIST(Tests ${KIT}CxxTests.cxx ${MyTests}
-                         EXTRA_INCLUDE vtkTestDriver.h)
+
+  INCLUDE(${VTK_SOURCE_DIR}/Rendering/vtkTestingObjectFactory.cmake)
+
   ADD_EXECUTABLE(${KIT}CxxTests ${Tests})
   TARGET_LINK_LIBRARIES(${KIT}CxxTests vtkRendering vtkIO)
   IF (VTK_USE_PARALLEL)
@@ -106,7 +126,7 @@ IF (VTK_USE_RENDERING AND VTK_USE_DISPLAY)
     TARGET_LINK_LIBRARIES(${KIT}CxxTests vtkInfovis)
   ENDIF (VTK_USE_GNU_R OR VTK_USE_MATLAB_MEX)
   SET (TestsToRun ${Tests})
-  REMOVE (TestsToRun ${KIT}CxxTests.cxx)
+  LIST (REMOVE_ITEM TestsToRun ${KIT}CxxTests.cxx)
 
   #
   # Add all the executables

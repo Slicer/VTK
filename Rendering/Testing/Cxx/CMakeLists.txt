@@ -19,6 +19,7 @@ IF(VTK_USE_DISPLAY)
     LoadOpenGLExtension.cxx
     TestActorLightingFlag.cxx
     TestAnimationScene.cxx
+    TestBackfaceCulling.cxx
     TestBlurAndSobelPasses.cxx
     TestDynamic2DLabelMapper.cxx
     TestFBO.cxx
@@ -32,12 +33,14 @@ IF(VTK_USE_DISPLAY)
     TestGradientBackground.cxx
     TestHomogeneousTransformOfActor.cxx
     TestImageResliceMapperAlpha.cxx
+    TestImageResliceMapperBackground.cxx
     TestImageResliceMapperBorder.cxx
     TestImageResliceMapperInterpolation.cxx
     TestImageResliceMapperOffAxis.cxx
     TestImageResliceMapperOrient3D.cxx
     TestImageResliceMapperSlab.cxx
     TestImageSliceMapperAlpha.cxx
+    TestImageSliceMapperBackground.cxx
     TestImageSliceMapperBorder.cxx
     TestImageSliceMapperOrient2D.cxx
     TestImageSliceMapperOrient3D.cxx
@@ -60,6 +63,7 @@ IF(VTK_USE_DISPLAY)
     TestPOVExporter.cxx
     TestResetCameraVerticalAspectRatio.cxx
     TestResetCameraVerticalAspectRatioParallel.cxx
+    TestSetImageOrientation.cxx
     TestSobelGradientMagnitudePass.cxx
     TestShadowMapPass.cxx
     TestTextActorAlphaBlending.cxx
@@ -78,6 +82,13 @@ IF(VTK_USE_DISPLAY)
     TestTranslucentLUTTextureDepthPeeling.cxx
     )
 
+  IF(WIN32 AND NOT VTK_USE_X)
+    SET(RenderingTestsWithArguments
+      ${RenderingTestsWithArguments}
+      TestWin32OpenGLRenderWindow.cxx
+      )
+  ENDIF(WIN32 AND NOT VTK_USE_X)
+
   IF(VTK_DATA_ROOT)
     SET(RenderingTestsWithArguments
       ${RenderingTestsWithArguments}
@@ -85,6 +96,7 @@ IF(VTK_USE_DISPLAY)
       TestMultiTexturing.cxx
       TestMultiTexturingTransform.cxx
       TestGlyph3DMapperArrow.cxx
+      TestScalarBar.cxx
       TestScenePicker.cxx
       TestTextureRGBA.cxx
       TestTextureRGBADepthPeeling.cxx
@@ -158,7 +170,7 @@ IF (VTK_OPENGL_HAS_OSMESA AND OSMESA_LIBRARY)
 ENDIF (VTK_OPENGL_HAS_OSMESA AND OSMESA_LIBRARY)
 
 SET (TestsToRun ${Tests})
-REMOVE (TestsToRun ${KIT}CxxTests.cxx)
+LIST (REMOVE_ITEM TestsToRun ${KIT}CxxTests.cxx)
 
 #
 # Add all the executables

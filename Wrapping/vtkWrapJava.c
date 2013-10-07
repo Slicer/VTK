@@ -1003,13 +1003,12 @@ void outputFunction(FILE *fp, ClassInfo *data)
 {
   int i;
   int args_ok = 1;
-  unsigned int aType = 0;
   unsigned int rType =
     (currentFunction->ReturnType & VTK_PARSE_UNQUALIFIED_TYPE);
   const char *jniFunction = 0;
   char *jniFunctionNew = 0;
-  const char *begPtr = 0;
-  const char *endPtr = 0;
+  char *jniFunctionOld = 0;
+  size_t j;
   CurrentData = data;
 
   args_ok = checkFunctionSignature(data);
@@ -1049,21 +1048,23 @@ void outputFunction(FILE *fp, ClassInfo *data)
            http://java.sun.com/javase/6/docs/technotes/guides/jni/spec/design.html#wp133
          VTK class names contain no underscore and do not need to be escaped.  */
       jniFunction = currentFunction->Name;
-      begPtr = currentFunction->Name;
-      endPtr = strchr(begPtr, '_');
-      if(endPtr)
+      jniFunctionOld = 0;
+      j = 0;
+      while (jniFunction[j] != '\0')
         {
-        jniFunctionNew = (char *)malloc(2*strlen(currentFunction->Name) + 1);
-        jniFunctionNew[0] = '\0';
-        while (endPtr)
+        /* replace "_" with "_1" */
+        if (jniFunction[j] == '_')
           {
-          strncat(jniFunctionNew, begPtr, endPtr - begPtr + 1);
-          strcat(jniFunctionNew, "1");
-          begPtr = endPtr + 1;
-          endPtr = strchr(begPtr, '_');
+          j++;
+          jniFunctionNew = (char *)malloc(strlen(jniFunction) + 2);
+          strncpy(jniFunctionNew, jniFunction, j);
+          jniFunctionNew[j] = '1';
+          strcpy(&jniFunctionNew[j+1], &jniFunction[j]);
+          free(jniFunctionOld);
+          jniFunctionOld = jniFunctionNew;
+          jniFunction = jniFunctionNew;
           }
-        strcat(jniFunctionNew, begPtr);
-        jniFunction = jniFunctionNew;
+        j++;
         }
 
       if(currentFunction->IsLegacy)
@@ -1142,8 +1143,6 @@ void outputFunction(FILE *fp, ClassInfo *data)
 
       for (i = 0; i < currentFunction->NumberOfArguments; i++)
         {
-        aType = (currentFunction->ArgTypes[i] & VTK_PARSE_UNQUALIFIED_TYPE);
-
         if (i)
           {
           fprintf(fp,",");

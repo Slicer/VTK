@@ -77,7 +77,6 @@ public:
     newPath=newPath+VTK_R_HOME;
     vtksys::SystemTools::PutEnv(newPath.c_str());
     }
-    const char* path2 = vtksys::SystemTools::GetEnv("R_HOME");
     const char *R_argv[]= {"vtkRInterface", "--gui=none", "--no-save", "--no-readline", "--silent"};
 
     Rf_initialize_R(sizeof(R_argv)/sizeof(R_argv[0]), const_cast<char **>(R_argv));
@@ -94,7 +93,7 @@ public:
     this->Rinitialized = 1;
     this->refcount++;
 
-    vtkstd::string  rcommand;
+    std::string  rcommand;
     rcommand.append("f<-file(paste(tempdir(), \"/Routput.txt\", sep = \"\"), open=\"wt+\")\nsink(f)\n");
     this->tmpFilePath.clear();
     this->tmpFilePath.append(R_TempDir);
@@ -143,7 +142,7 @@ protected:
 
 private:
 
-  vtkstd::string tmpFilePath;
+  std::string tmpFilePath;
   int refcount;
   int Rinitialized;
   static vtkImplementationRSingleton* ins;
@@ -376,6 +375,8 @@ int vtkRInterface::FillOutputBuffer()
 
   FILE *fp;
   long len;
+  long rlen;
+  long tlen;
 
   if(this->buffer && (this->buffer_size > 0) )
     {
@@ -394,22 +395,19 @@ int vtkRInterface::FillOutputBuffer()
       {
       return(1);
       }
-      
-    if(len >= this->buffer_size)
-      {
-      fseek(fp,len-this->buffer_size+1,SEEK_SET);
-      fread(this->buffer,1,this->buffer_size-1,fp);
-      this->buffer[this->buffer_size-1] = '\0';
-      }
-    else
-      {
-      fseek(fp,0,SEEK_SET);
-      fread(this->buffer,1,len,fp);
-      this->buffer[len] = '\0';
-      }
-    
-    
+
+    tlen = ((len >= this->buffer_size) ? this->buffer_size-1 : len);
+    fseek(fp,len-tlen,SEEK_SET);
+    rlen = static_cast<long>(fread(this->buffer,1,tlen,fp));
+    this->buffer[tlen] = '\0';
+
     fclose(fp);
+
+    if (rlen != tlen)
+      {
+      vtkErrorMacro(<<"Error while reading file " << this->rs->GetROutputFilePath());
+      return(0);
+      }
 
     return(1);
 

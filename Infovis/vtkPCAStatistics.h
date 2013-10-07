@@ -17,15 +17,15 @@ PURPOSE.  See the above copyright notice for more information.
   Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
   the U.S. Government retains certain rights in this software.
   -------------------------------------------------------------------------*/
-// .NAME vtkPCAStatistics - A class for principal component analysis
+// .NAME vtkPCAStatistics - A class for multivariate principal component analysis
 //
 // .SECTION Description
 // This class derives from the multi-correlative statistics algorithm and
 // uses the covariance matrix and Cholesky decomposition computed by it.
-// However, when it finalizes the statistics in Learn mode, the PCA class
+// However, when it finalizes the statistics in learn operation, the PCA class
 // computes the SVD of the covariance matrix in order to obtain its eigenvectors.
 //
-// In the assess mode, the input data are
+// In the assess operation, the input data are
 // - projected into the basis defined by the eigenvectors,
 // - the energy associated with each datum is computed,
 // - or some combination thereof.
@@ -34,10 +34,12 @@ PURPOSE.  See the above copyright notice for more information.
 // projection into a lower-dimensional state while minimizing (in a 
 // least squares sense) the projection error.
 //
+// In the test operation, a Jarque-Bera-Srivastava test of n-d normality is performed.
 //
 // .SECTION Thanks
 // Thanks to David Thompson, Philippe Pebay and Jackson Mayo from
 // Sandia National Laboratories for implementing this class.
+// Updated by Philippe Pebay, Kitware SAS 2012
 
 #ifndef __vtkPCAStatistics_h
 #define __vtkPCAStatistics_h
@@ -126,7 +128,8 @@ public:
   virtual void SetSpecifiedNormalization( vtkTable* );
 
   // Description:
-  // Get the eigenvalues. This function:
+  // Get the eigenvalues. The eigenvalues are ordered according from largest to smallest.
+  // This function:
   // void GetEigenvalues(int request, int i, vtkDoubleArray*);
   // does all of the work. The other functions simply call this function with the appropriate
   // parameters. These functions are not valid unless Update() has been called and the Derive
@@ -136,9 +139,11 @@ public:
   double GetEigenvalue(int request, int i);
   double GetEigenvalue(int i);
 
-
   // Description:
-  // Get the eigenvectors. This function:
+  // Get the eigenvectors. The eigenvectors are ordered according to the magnitude of their
+  // associated eigenvalues, sorted from largest to smallest. That is, eigenvector 0 corresponds
+  // to the largest eigenvalue.
+  // This function:
   // void GetEigenvectors(int request, vtkDoubleArray* eigenvectors)
   // does all of the work. The other functions are convenience functions that call this function
   // with default arguments. These functions are not valid unless Update() has been called and the Derive
@@ -149,7 +154,7 @@ public:
   void GetEigenvector(int request, int i, vtkDoubleArray* eigenvector);
 
   // Description:
-  // This variable controls the dimensionality of output tuples in Assess mode.
+  // This variable controls the dimensionality of output tuples in Assess operation.
   // Consider the case where you have requested a PCA on D columns.
   //
   // When set to vtkPCAStatistics::FULL_BASIS, the entire set of basis vectors

@@ -17,6 +17,7 @@
 
 #include "vtkContext2D.h"
 #include "vtkPen.h"
+#include "vtkBrush.h"
 #include "vtkAxis.h"
 #include "vtkContextMapper2D.h"
 #include "vtkPoints2D.h"
@@ -551,19 +552,28 @@ bool vtkPlotPoints::SelectPoints(const vtkVector2f& min, const vtkVector2f& max)
   lowPoint.pos = min;
   low = std::lower_bound(v.begin(), v.end(), lowPoint, compVector3fX);
 
+  // Output a sorted selection list too.
+  std::vector<vtkIdType> selected;
   // Iterate until we are out of range in X
   while (low != v.end())
     {
       if (low->pos.X() >= min.X() && low->pos.X() <= max.X() &&
           low->pos.Y() >= min.Y() && low->pos.Y() <= max.Y())
         {
-        this->Selection->InsertNextValue(low->index);
+        selected.push_back(low->index);
         }
       else if (low->pos.X() > max.X())
         {
         break;
         }
       ++low;
+    }
+  std::sort(selected.begin(), selected.end());
+  this->Selection->SetNumberOfTuples(selected.size());
+  vtkIdType *ptr = static_cast<vtkIdType *>(this->Selection->GetVoidPointer(0));
+  for (size_t i = 0; i < selected.size(); ++i)
+    {
+    ptr[i] = selected[i];
     }
   return this->Selection->GetNumberOfTuples() > 0;
 }
@@ -685,6 +695,10 @@ bool vtkPlotPoints::UpdateTableCache(vtkTable *table)
       if (!this->LookupTable)
         {
         this->CreateDefaultLookupTable();
+        }
+      if (this->Colors)
+        {
+        this->Colors->UnRegister(this);
         }
       this->Colors = this->LookupTable->MapScalars(c, VTK_COLOR_MODE_MAP_SCALARS, -1);
       // Consistent register and unregisters

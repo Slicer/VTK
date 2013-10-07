@@ -23,6 +23,7 @@
 #include "vtkTextProperty.h"
 #include "vtkStdString.h"
 #include "vtkVector.h"
+#include "vtkVectorOperators.h"
 #include "vtkWeakPointer.h"
 #include "vtkSmartPointer.h"
 #include "vtkStringArray.h"
@@ -37,7 +38,7 @@
 class vtkChartLegend::Private
 {
 public:
-  Private()
+  Private() : Point(0, 0)
   {
   }
   ~Private()
@@ -57,6 +58,7 @@ vtkChartLegend::vtkChartLegend()
 {
   this->Storage = new vtkChartLegend::Private;
   this->Point = this->Storage->Point.GetData();
+  this->Rect.Set(0, 0, 0, 0);
   // Defaults to 12pt text, with top, right alignment to the specified point.
   this->LabelProperties->SetFontSize(12);
   this->LabelProperties->SetColor(0.0, 0.0, 0.0);
@@ -279,10 +281,10 @@ vtkChart* vtkChartLegend::GetChart()
 //-----------------------------------------------------------------------------
 bool vtkChartLegend::Hit(const vtkContextMouseEvent &mouse)
 {
-  if (this->DragEnabled && mouse.ScreenPos.X() > this->Rect.X() &&
-      mouse.ScreenPos.X() < this->Rect.X() + this->Rect.Width() &&
-      mouse.ScreenPos.Y() > this->Rect.Y() &&
-      mouse.ScreenPos.Y() < this->Rect.Y() + this->Rect.Height())
+  if (this->DragEnabled && mouse.GetScreenPos().X() > this->Rect.X() &&
+      mouse.GetScreenPos().X() < this->Rect.X() + this->Rect.Width() &&
+      mouse.GetScreenPos().Y() > this->Rect.Y() &&
+      mouse.GetScreenPos().Y() < this->Rect.Y() + this->Rect.Height())
     {
     return true;
     }
@@ -297,7 +299,7 @@ bool vtkChartLegend::MouseMoveEvent(const vtkContextMouseEvent &mouse)
 {
   if (this->Button == vtkContextMouseEvent::LEFT_BUTTON)
     {
-    vtkVector2f delta = mouse.ScenePos - mouse.LastScenePos;
+    vtkVector2f delta = mouse.GetScenePos() - mouse.GetLastScenePos();
     this->HorizontalAlignment = vtkChartLegend::CUSTOM;
     this->Storage->Point = this->Storage->Point + delta;
     this->GetScene()->SetDirty(true);
@@ -308,7 +310,7 @@ bool vtkChartLegend::MouseMoveEvent(const vtkContextMouseEvent &mouse)
 //-----------------------------------------------------------------------------
 bool vtkChartLegend::MouseButtonPressEvent(const vtkContextMouseEvent &mouse)
 {
-  if (mouse.Button == vtkContextMouseEvent::LEFT_BUTTON)
+  if (mouse.GetButton() == vtkContextMouseEvent::LEFT_BUTTON)
     {
     this->Button = vtkContextMouseEvent::LEFT_BUTTON;
     return true;

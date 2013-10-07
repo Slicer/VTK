@@ -2,8 +2,15 @@ IF (VTK_USE_RENDERING AND VTK_USE_DISPLAY)
   SET(KIT Imaging)
   CREATE_TEST_SOURCELIST(Tests ${KIT}CxxTests.cxx
     ImportExport.cxx
+    ImageBSplineCoefficients.cxx
     ImageWeightedSum.cxx
+    ImageAutoRange.cxx
     ImageAccumulate.cxx
+    ImageHistogram.cxx
+    ImageHistogramStatistics.cxx
+    ImageResize.cxx
+    ImageResize3D.cxx
+    ImageResizeCropping.cxx
     FastSplatter.cxx
     TestUpdateExtentReset.cxx
     EXTRA_INCLUDE vtkTestDriver.h
@@ -11,7 +18,7 @@ IF (VTK_USE_RENDERING AND VTK_USE_DISPLAY)
   ADD_EXECUTABLE(${KIT}CxxTests ${Tests})
   TARGET_LINK_LIBRARIES(${KIT}CxxTests vtkRendering vtkIO)
   SET (TestsToRun ${Tests})
-  REMOVE (TestsToRun ${KIT}CxxTests.cxx)
+  LIST (REMOVE_ITEM TestsToRun ${KIT}CxxTests.cxx)
 
   #
   # Add all the executables

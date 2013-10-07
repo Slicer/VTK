@@ -6,8 +6,23 @@ ENDIF(NOT VTK_INSTALL_NO_LIBRARIES)
 
 # Build third-party utilities.
 
+SET(_VTK_THIRD_PARTY_HEADERS "")
+FOREACH(u expat freetype gl2ps hdf5 jpeg libproj4 libxml2 oggtheora png tiff zlib)
+  CONFIGURE_FILE(${VTK_SOURCE_DIR}/Utilities/vtk_${u}.h.in
+                 ${VTK_BINARY_DIR}/Utilities/vtk_${u}.h @ONLY)
+  LIST(APPEND _VTK_THIRD_PARTY_HEADERS ${VTK_BINARY_DIR}/Utilities/vtk_${u}.h)
+ENDFOREACH()
+
 VTK_THIRD_PARTY_SUBDIR(ZLIB vtkzlib)
 VTK_THIRD_PARTY_SUBDIR(HDF5 vtkhdf5)
+
+IF(NOT VTK_USE_SYSTEM_HDF5 AND NOT VTK_INSTALL_NO_LIBRARIES)
+  SET_PROPERTY(GLOBAL APPEND PROPERTY VTK_TARGETS vtkhdf5)
+  IF(HDF5_BUILD_HL_LIB)
+    SET_PROPERTY(GLOBAL APPEND PROPERTY VTK_TARGETS vtkhdf5_hl)
+  ENDIF(HDF5_BUILD_HL_LIB)
+ENDIF(NOT VTK_USE_SYSTEM_HDF5 AND NOT VTK_INSTALL_NO_LIBRARIES)
+
 IF(VTK_USE_GL2PS)
   VTK_THIRD_PARTY_SUBDIR(GL2PS vtkgl2ps)
 ENDIF(VTK_USE_GL2PS)
@@ -53,6 +68,9 @@ IF(VTK_HAS_EXODUS)
   ADD_SUBDIRECTORY(vtkexodus2)
 ENDIF(VTK_HAS_EXODUS)
 
+# helper classes for vtkLSDynaReader
+VTK_THIRD_PARTY_SUBDIR(LSDyna LSDyna)
+  
 ADD_SUBDIRECTORY(vtkalglib)
 
 ADD_SUBDIRECTORY(Doxygen)
@@ -80,15 +98,7 @@ ENDIF(VTK_USE_RENDERING)
 
 IF(NOT VTK_INSTALL_NO_DEVELOPMENT)
   INSTALL(FILES
-    vtk_expat.h
-    vtk_jpeg.h
-    vtk_png.h
-    vtk_zlib.h
-    vtk_gl2ps.h
-    vtk_tiff.h
-    vtk_freetype.h
-    vtk_libxml2.h
-    vtk_oggtheora.h
+    ${_VTK_THIRD_PARTY_HEADERS}
     DESTINATION ${VTK_INSTALL_INCLUDE_DIR_CM24}
     COMPONENT Development
     )

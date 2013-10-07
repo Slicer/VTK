@@ -121,6 +121,14 @@ void vtkOpenGLContextDevice2D::Begin(vtkViewport* viewport)
       }
     }
 
+  // Enable simple line, point and polygon antialiasing if multisampling is on.
+  if (this->Renderer->GetRenderWindow()->GetMultiSamples())
+    {
+    glEnable(GL_LINE_SMOOTH);
+    glEnable(GL_POINT_SMOOTH);
+    glEnable(GL_POLYGON_SMOOTH);
+    }
+
   this->InRender = true;
 }
 
@@ -140,6 +148,14 @@ void vtkOpenGLContextDevice2D::End()
 
   // Restore the GL state that we changed
   this->Storage->RestoreGLState();
+
+  // Disable simple line, point and polygon antialiasing if multisampling is on.
+  if (this->Renderer->GetRenderWindow()->GetMultiSamples())
+    {
+    glDisable(GL_LINE_SMOOTH);
+    glDisable(GL_POINT_SMOOTH);
+    glDisable(GL_POLYGON_SMOOTH);
+    }
 
   this->RenderWindow = NULL;
   this->InRender = false;
@@ -551,13 +567,13 @@ void vtkOpenGLContextDevice2D::DrawEllipticArc(float x, float y, float rX,
     }
 
   this->SetLineType(this->Pen->GetLineType());
-  glColor4ubv(this->Pen->GetColor());
   glLineWidth(this->Pen->GetWidth());
   glEnableClientState(GL_VERTEX_ARRAY);
   glVertexPointer(2, GL_FLOAT, 0, p);
-  glDrawArrays(GL_LINE_STRIP, 0, iterations+1);
   glColor4ubv(this->Brush->GetColor());
   glDrawArrays(GL_TRIANGLE_FAN, 0, iterations+1);
+  glColor4ubv(this->Pen->GetColor());
+  glDrawArrays(GL_LINE_STRIP, 0, iterations+1);
   glDisableClientState(GL_VERTEX_ARRAY);
 
   delete[] p;

@@ -62,11 +62,11 @@ class FileStreamReader
 {
 public:
   FileStreamReader();
-  ~FileStreamReader(){};
+  ~FileStreamReader();
 
   bool open(const char* fileName);
-  bool is_open()const{return Open;};
-  bool eof()const{return Eof;};
+  bool is_open()const {return Open;}
+  bool eof()const {return Eof;}
 
   void rewind();
   void close();
@@ -81,14 +81,21 @@ protected:
   unsigned int Pos;
   unsigned int BuffEnd;
   gzFile file;
+  std::string FileName;
 
 };
 
 // ----------------------------------------------------------------------------
 FileStreamReader::FileStreamReader()
-: Open(false),Eof(true),Pos(BUFF_SIZE),BuffEnd(BUFF_SIZE)
+  : Open(false),Eof(true),Pos(BUFF_SIZE),BuffEnd(BUFF_SIZE),FileName()
 {
 
+}
+
+// ----------------------------------------------------------------------------
+FileStreamReader::~FileStreamReader()
+{
+  this->close();
 }
 
 // ----------------------------------------------------------------------------
@@ -96,20 +103,25 @@ bool FileStreamReader::open( const char* fileName )
   {
   if ( !this->Open )
     {
+    this->FileName = std::string(fileName);
     //zlib handles both compressed and uncompressed file
     //we just have peak into the file and see if it has the magic
     //flags or not
     unsigned char magic[2];
     FILE *ff = fopen(fileName,"rb");
-    fread(magic,1,2,ff);
+    size_t count = fread(magic,1,2,ff);
     fclose(ff);
 
-    const char* mode = (magic[0] == 0x1f && magic[1] == 0x8b) ? "rb" : "r";
-    this->file = gzopen(fileName,mode);
+    // only continue if fread succeeded
+    if (count == 2)
+      {
+      const char* mode = (magic[0] == 0x1f && magic[1] == 0x8b) ? "rb" : "r";
+      this->file = gzopen(fileName,mode);
 
-    this->Eof = (this->file == 0);
-    this->Open = (this->file != 0);
-    this->Pos = BUFF_SIZE;
+      this->Eof = (this->file == 0);
+      this->Open = (this->file != 0);
+      this->Pos = BUFF_SIZE;
+      }
     }
   return this->Open;
   }
@@ -140,16 +152,16 @@ int FileStreamReader::get()
 }
 
 // ----------------------------------------------------------------------------
-void FileStreamReader::rewind()
+void FileStreamReader::rewind( )
 {
   if ( this->Open )
     {
-    this->Open = false;
-    this->Eof = false;
-    this->Pos = this->BUFF_SIZE;
-    this->BuffEnd = this->BUFF_SIZE;
-
-    gzrewind(this->file);
+    //we don't want to use gzrewind as it rewinds to not the start of the
+    //file, but to start of the data in the file, meaning we are past any
+    //comments or headers.
+    std::string fn = this->FileName;
+    this->close();
+    this->open(fn.c_str());
     }
 }
 
@@ -162,6 +174,7 @@ void FileStreamReader::close()
     this->Eof = false;
     this->Pos = this->BUFF_SIZE;
     this->BuffEnd = this->BUFF_SIZE;
+    this->FileName = std::string();
 
     gzclose(this->file);
     }
@@ -193,7 +206,7 @@ public:
   bool    TokenIsString;
   bool    IsCompressed;
   FileStreamReader ASCIIStream;
-  vtkstd::string TokenBackup;
+  std::string TokenBackup;
 
 public:
   void Init()
@@ -217,12 +230,12 @@ public:
   // This functions obtains the next token from the ASCII stream.
   // Note that it is assumed that the ASCII stream is ready and no
   // reading error occurs.
-  vtkstd::string GetNextToken()
+  std::string GetNextToken()
   {
     // this is where we take a one-token lookahead
     if ( !this->TokenBackup.empty() )
       {
-      vtkstd::string  retval = this->TokenBackup;
+      std::string  retval = this->TokenBackup;
       this->TokenBackup = "";
       return  retval;
       }
@@ -236,7 +249,7 @@ public:
     this->NextCharEOL   = false;
     this->TokenIsString = false;
 
-    vtkstd::string  retval = "";
+    std::string  retval = "";
     if ( !this->NextCharValid )
       {
       this->TheNextChar   = this->ASCIIStream.get();
@@ -245,6 +258,22 @@ public:
       if ( !this->ASCIIStream )
         {
         this->NextCharEOF = true;
+        }
+      }
+
+    //if the token is a comment token, skip the entire line
+    if (!this->NextCharEOF && this->TheNextChar == '#')
+      {
+      while ( (!this->NextCharEOF) &&
+                (this->TheNextChar != '\n') &&
+                (this->TheNextChar != '\r') )
+        {
+        this->TheNextChar = this->ASCIIStream.get();
+        if ( this->TheNextChar == '\n'||
+             this->TheNextChar == '\r' )
+          {
+          this->NextCharEOL = true;
+          }
         }
       }
 
@@ -383,7 +412,7 @@ private:
 #endif
 
 // ----------------------------------------------------------------------------
-static int GetCoord( const vtkstd::string & theToken )
+static int GetCoord( const std::string & theToken )
 {
   if ( theToken == "X" || theToken == "x" || theToken == "I" )
     {
@@ -404,7 +433,7 @@ static int GetCoord( const vtkstd::string & theToken )
 }
 
 // ----------------------------------------------------------------------------
-static int GuessCoord( const vtkstd::string & theToken )
+static int GuessCoord( const std::string & theToken )
 {
   int  guessVal = GetCoord( theToken );
 
@@ -423,7 +452,7 @@ static int GuessCoord( const vtkstd::string & theToken )
 }
 
 // ----------------------------------------------------------------------------
-static vtkstd::string SimplifyWhitespace( const vtkstd::string & s )
+static std::string SimplifyWhitespace( const std::string & s )
 {
   int headIndx = 0;
   int tailIndx = int( s.length() ) - 1;
@@ -739,8 +768,8 @@ void vtkTecplotReader::GetArraysFromPointPackingZone
   float * arrayPtr = NULL;
   float   theValue;
   vtkFloatArray * theArray = NULL;
-  vtkstd::vector< float * > pointers;
-  vtkstd::vector< vtkFloatArray * > zoneData;
+  std::vector< float * > pointers;
+  std::vector< vtkFloatArray * > zoneData;
 
   pointers.clear();
   zoneData.clear();
@@ -871,7 +900,7 @@ void vtkTecplotReader::GetArraysFromBlockPackingZone( int numNodes, int numCells
   float * cordsPtr = NULL;
   float * arrayPtr = NULL;
   vtkFloatArray * theArray = NULL;
-  vtkstd::vector< vtkFloatArray * > zoneData;
+  std::vector< vtkFloatArray * > zoneData;
   vtkDataSetAttributes * attribut[2] = { nodeData, cellData };
 
   zoneData.clear();
@@ -1290,8 +1319,8 @@ void vtkTecplotReader::GetDataArraysList()
   int             guessedYid = -1;
   int             guessedZid = -1;
   bool            tokenReady = false;
-  vtkstd::string  theTpToken = "";
-  vtkstd::string  noSpaceTok = "";
+  std::string  theTpToken = "";
+  std::string  noSpaceTok = "";
 
   this->Variables.clear();
   this->NumberOfVariables = 0;
@@ -1460,7 +1489,7 @@ void vtkTecplotReader::ReadFile( vtkMultiBlockDataSet * multZone )
 
   this->Init();
   this->Internal->ASCIIStream.open( this->FileName );
-  vtkstd::string tok = this->Internal->GetNextToken();
+  std::string tok = this->Internal->GetNextToken();
 
   while ( !this->Internal->NextCharEOF )
     {
@@ -1524,7 +1553,7 @@ void vtkTecplotReader::ReadFile( vtkMultiBlockDataSet * multZone )
             }
           }
 
-        vtkstd::string   tok_nw = SimplifyWhitespace( tok );
+        std::string   tok_nw = SimplifyWhitespace( tok );
 
         switch (  GetCoord( tok_nw )  )
           {
@@ -1551,7 +1580,7 @@ void vtkTecplotReader::ReadFile( vtkMultiBlockDataSet * multZone )
         {
         while ( true )
           {
-          vtkstd::string      tok_nw = SimplifyWhitespace( tok );
+          std::string      tok_nw = SimplifyWhitespace( tok );
 
           switch (  GetCoord( tok_nw )  )
             {
@@ -1628,9 +1657,9 @@ void vtkTecplotReader::ReadFile( vtkMultiBlockDataSet * multZone )
       char     untitledZoneName[40];
       sprintf( untitledZoneName, "zone%05d", zoneIndex );
 
-      vtkstd::string format    = "";
-      vtkstd::string elemType  = "";
-      vtkstd::string ZoneName = untitledZoneName;
+      std::string format    = "";
+      std::string elemType  = "";
+      std::string ZoneName = untitledZoneName;
 
       tok = this->Internal->GetNextToken();
       while (  !( tok != "T"  &&
@@ -1689,12 +1718,12 @@ void vtkTecplotReader::ReadFile( vtkMultiBlockDataSet * multZone )
           }
         else if ( tok == "VARLOCATION" )
           {
-          vtkstd::string  centering;
+          std::string  centering;
           this->CellBased.clear();
           this->CellBased.resize( this->NumberOfVariables, 0 );
 
           //read token to ascertain VARLOCATION syntax usage
-          vtkstd::string var_format_type = this->Internal->GetNextToken();
+          std::string var_format_type = this->Internal->GetNextToken();
 
           //if each variable will have data type specified explicitly (as is handled in old Tecplot reader),
           //else a range is specified for CELLCENTERED only, with NODAL values assumed implicitly
@@ -1719,19 +1748,19 @@ void vtkTecplotReader::ReadFile( vtkMultiBlockDataSet * multZone )
               {
               //remove left square bracket, if it exists
               size_t brack_pos = var_format_type.find("[");
-              if ( brack_pos != vtkstd::string::npos )
+              if ( brack_pos != std::string::npos )
                 var_format_type.erase(brack_pos, brack_pos+1);
 
               //remove right square bracket, if it exists
               brack_pos = var_format_type.find("]");
-              if ( brack_pos != vtkstd::string::npos )
+              if ( brack_pos != std::string::npos )
                 var_format_type.erase(brack_pos,brack_pos+1);
 
               //if a range is defined, then split again, convert to int and set to cell data
               //else if a single value is defined, then just set the flag directly
-              if ( var_format_type.find("-") != vtkstd::string::npos )
+              if ( var_format_type.find("-") != std::string::npos )
                 {
-                std::vector<vtkstd::string> var_range;
+                std::vector<std::string> var_range;
                 vtksys::SystemTools::Split(var_format_type.c_str(), var_range, '-');
 
                 int cell_start = atoi(var_range[0].c_str()) - 1;
@@ -1837,8 +1866,8 @@ void vtkTecplotReader::ReadFile( vtkMultiBlockDataSet * multZone )
           if( haveVectorExpr )
             {
             // Remove spaces
-            vtkstd::string::size_type pos = tok.find( " " );
-            while( pos != vtkstd::string::npos )
+            std::string::size_type pos = tok.find( " " );
+            while( pos != std::string::npos )
               {
               tok.replace( pos, 1, "" );
               pos = tok.find( " " );
@@ -1846,16 +1875,16 @@ void vtkTecplotReader::ReadFile( vtkMultiBlockDataSet * multZone )
 
             // Look for '('
             pos = tok.find( "(" );
-            if( pos != vtkstd::string::npos )
+            if( pos != std::string::npos )
               {
-              vtkstd::string  exprName(  tok.substr( 0, pos )  );
-              vtkstd::string  exprDef (  tok.substr( pos, tok.size() - pos )  );
+              std::string  exprName(  tok.substr( 0, pos )  );
+              std::string  exprDef (  tok.substr( pos, tok.size() - pos )  );
 
               exprDef.replace( 0, 1, "{" );
 
               // Replace ')' with '}'
               pos = exprDef.find( ")" );
-              if( pos != vtkstd::string::npos )
+              if( pos != std::string::npos )
                 {
                 exprDef.replace( pos, 1, "}" );
                 vtkDebugMacro( "Expr name = " << exprName.c_str()

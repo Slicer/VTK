@@ -111,6 +111,7 @@ vtkLongArray.cxx
 vtkLookupTable.cxx
 vtkLookupTableWithEnabling.cxx
 vtkMath.cxx
+vtkMathUtilities.h
 vtkMatrix3x3.cxx
 vtkMatrix4x4.cxx
 vtkMatrixToHomogeneousTransform.cxx
@@ -195,6 +196,7 @@ vtkUnsignedShortArray.cxx
 vtkVariant.cxx
 vtkVariantArray.cxx
 vtkVector.h
+vtkTuple.h
 vtkVersion.cxx
 vtkVoidArray.cxx
 vtkWarpTransform.cxx
@@ -396,8 +398,10 @@ ABSTRACT
 
 SET_SOURCE_FILES_PROPERTIES(
   vtkColor
+  vtkMathUtilities
   vtkRect
   vtkVector
+  vtkTuple
   HEADER_FILE_ONLY
 )
 
@@ -416,6 +420,7 @@ SET_SOURCE_FILES_PROPERTIES(
   vtkIOStream.cxx
   vtkIndent.cxx
   vtkLargeInteger.cxx
+  vtkMathUtilities.h
   vtkOStrStreamWrapper.cxx
   vtkOStreamWrapper.cxx
   vtkOldStyleCallbackCommand.cxx
@@ -427,6 +432,7 @@ SET_SOURCE_FILES_PROPERTIES(
   vtkWeakPointerBase.cxx
   vtkUnicodeString.cxx
   vtkVector.h
+  vtkTuple.h
 
   WRAP_EXCLUDE
 )
@@ -437,6 +443,7 @@ SET_SOURCE_FILES_PROPERTIES(
   vtkTimeStamp.cxx
   vtkVariant.cxx
   vtkVector.h
+  vtkTuple.h
 
   PROPERTIES WRAP_SPECIAL 1
 )
@@ -582,6 +589,7 @@ IF(NOT VTK_INSTALL_NO_DEVELOPMENT)
     vtkWin32Header.h
     vtkWindows.h
     ${CMAKE_CURRENT_SOURCE_DIR}/Testing/Cxx/vtkTestDriver.h
+    ${CMAKE_CURRENT_BINARY_DIR}/vtkMathConfigure.h
     )
 
   IF(VTK_WRAP_TCL)

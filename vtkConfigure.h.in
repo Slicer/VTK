@@ -177,20 +177,24 @@
 /* Setup VTK based on platform features and configuration.                  */
 
 /* Setup vtkstd, a portable namespace for std.  */
-#ifndef VTK_NO_STD_NAMESPACE
-# define vtkstd std
-#else
-# define vtkstd
+#ifndef VTK_LEGACY_REMOVE
+# ifndef VTK_NO_STD_NAMESPACE
+#  define vtkstd std
+# else
+#  define vtkstd
+# endif
 #endif
 
 /* Define a "vtkstd_bool" type.  This should be used as the
    return type of comparison operators to keep STL happy on all
    platforms.  It should not be used elsewhere.  Only use bool
    if this file is included by a c++ file. */
-#if defined(VTK_COMPILER_HAS_BOOL) && defined(__cplusplus)
-typedef bool vtkstd_bool;
-#else
-typedef int vtkstd_bool;
+#ifndef VTK_LEGACY_REMOVE
+# if defined(VTK_COMPILER_HAS_BOOL) && defined(__cplusplus)
+  typedef bool vtkstd_bool;
+# else
+  typedef int vtkstd_bool;
+# endif
 #endif
 
 /* Define a macro to help define template specializations.  Skip if

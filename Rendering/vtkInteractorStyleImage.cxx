@@ -89,6 +89,10 @@ void vtkInteractorStyleImage::StartWindowLevel()
     return;
     }
   this->StartState(VTKIS_WINDOW_LEVEL);
+
+  // Get the last (the topmost) image
+  this->SetCurrentImageToNthImage(-1);
+
   if (this->HandleObservers &&
       this->HasObserver(vtkCommand::StartWindowLevelEvent))
     {
@@ -96,9 +100,6 @@ void vtkInteractorStyleImage::StartWindowLevel()
     }
   else
     {
-    // Get the last (the topmost) image
-    this->SetCurrentImageToNthImage(-1);
-
     if (this->CurrentImageProperty)
       {
       vtkImageProperty *property = this->CurrentImageProperty;
@@ -230,6 +231,14 @@ void vtkInteractorStyleImage::OnLeftButtonDown()
     this->StartRotate();
     }
 
+  // If ctrl is held down in slicing mode, slice the image
+  else if (this->InteractionMode == VTKIS_IMAGE_SLICING &&
+           this->Interactor->GetControlKey())
+    {
+    this->StartSlice();
+    }
+
+
   // The rest of the button + key combinations remain the same
 
   else
@@ -276,7 +285,8 @@ void vtkInteractorStyleImage::OnMiddleButtonDown()
     }
 
   // If shift is held down, change the slice
-  if (this->InteractionMode == VTKIS_IMAGE3D &&
+  if ((this->InteractionMode == VTKIS_IMAGE3D ||
+       this->InteractionMode == VTKIS_IMAGE_SLICING) &&
       this->Interactor->GetShiftKey())
     {
     this->StartSlice();
@@ -333,6 +343,11 @@ void vtkInteractorStyleImage::OnRightButtonDown()
     {
     this->StartSlice();
     }
+  else if (this->InteractionMode == VTKIS_IMAGE_SLICING &&
+           this->Interactor->GetControlKey())
+    {
+    this->StartSpin();
+    }
 
   // The rest of the button + key combinations remain the same
 
@@ -362,6 +377,14 @@ void vtkInteractorStyleImage::OnRightButtonUp()
         this->ReleaseFocus();
         }
       break;
+
+    case VTKIS_SPIN:
+      if ( this->Interactor )
+        {
+        this->EndSpin();
+        }
+      break;
+
     }
 
   // Call parent to handle all other states and perform additional work
@@ -581,15 +604,16 @@ void vtkInteractorStyleImage::SetImageOrientation(
 {
   if (this->CurrentRenderer)
     {
+    // the cross product points out of the screen
     double vector[3];
     vtkMath::Cross(leftToRight, viewUp, vector);
     double focus[3];
     vtkCamera *camera = this->CurrentRenderer->GetActiveCamera();
     camera->GetFocalPoint(focus);
     double d = camera->GetDistance();
-    camera->SetPosition(focus[0] - d*vector[0],
-                        focus[1] - d*vector[1],
-                        focus[2] - d*vector[2]);
+    camera->SetPosition(focus[0] + d*vector[0],
+                        focus[1] + d*vector[1],
+                        focus[2] + d*vector[2]);
     camera->SetFocalPoint(focus);
     camera->SetViewUp(viewUp);
     }
@@ -619,15 +643,24 @@ void vtkInteractorStyleImage::SetCurrentImageToNthImage(int i)
     int j = 0;
     for (props->InitTraversal(pit); (prop = props->GetNextProp(pit)); )
       {
+      bool foundImageProp = false;
       for (prop->InitPathTraversal(); (path = prop->GetNextPath()); )
         {
         vtkProp *tryProp = path->GetLastNode()->GetViewProp();
         if ( (imageProp = vtkImageSlice::SafeDownCast(tryProp)) != 0 )
           {
-          if (j == i) { break; }
+          if (j == i)
+            {
+            foundImageProp = true;
+            break;
+            }
           imageProp = 0;
           j++;
           }
+        }
+      if (foundImageProp)
+        {
+        break;
         }
       }
     if (i < 0)
@@ -671,8 +704,23 @@ void vtkInteractorStyleImage::PrintSelf(ostream& os, vtkIndent indent)
      << this->WindowLevelStartPosition[0] << ", "
      << this->WindowLevelStartPosition[1] << ")\n";
 
-  os << indent << "Interaction Mode: " <<
-     ((this->InteractionMode == VTKIS_IMAGE3D) ? "Image3D\n" : "Image2D\n");
+  os << indent << "Interaction Mode: ";
+  if (this->InteractionMode == VTKIS_IMAGE2D)
+    {
+    os << "Image2D\n";
+    }
+  else if (this->InteractionMode == VTKIS_IMAGE3D)
+    {
+    os << "Image3D\n";
+    }
+  else if (this->InteractionMode == VTKIS_IMAGE_SLICING)
+    {
+    os << "ImageSlicing\n";
+    }
+  else
+    {
+    os << "Unknown\n";
+    }
 
   os << indent << "X View Right Vector: ("
      << this->XViewRightVector[0] << ", "

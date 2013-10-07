@@ -107,6 +107,12 @@ public:
   // Initialize OpenGL for this window.
   virtual void OpenGLInit();
 
+  // Initialize the state of OpenGL that VTK wants for this window
+  virtual void OpenGLInitState();
+
+  // Initialize VTK for rendering in a new OpenGL context
+  virtual void OpenGLInitContext();
+
   // Description:
   // Return the OpenGL name of the back left buffer.
   // It is GL_BACK_LEFT if GL is bound to the window-system-provided
@@ -169,11 +175,9 @@ public:
   // Return a string matching the last graphic error status.
   virtual const char *GetLastGraphicErrorString();
 
-//BTX
   // Description:
   // Get the time when the OpenGL context was created.
-  vtkGetMacro(ContextCreationTime, vtkTimeStamp);
-//ETX
+  virtual unsigned long GetContextCreationTime();
 
   // Description:
   // Returns the extension manager. A new one will be created if one hasn't

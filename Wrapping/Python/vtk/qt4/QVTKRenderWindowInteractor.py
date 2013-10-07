@@ -33,10 +33,10 @@ try:
 except ImportError:
     try:
         from PySide import QtCore, QtGui
-    except ImportError as err:
+    except ImportError:
         raise ImportError("Cannot load either PyQt or PySide")
-import vtk
 
+import vtk
 
 class QVTKRenderWindowInteractor(QtGui.QWidget):
 
@@ -182,6 +182,13 @@ class QVTKRenderWindowInteractor(QtGui.QWidget):
         self._Iren.GetRenderWindow().AddObserver('CursorChangedEvent',
                                                  self.CursorChangedEvent)
 
+        #Create a hidden child widget and connect its destroyed signal to its
+        #parent ``Finalize`` slot. The hidden children will be destroyed before
+        #its parent thus allowing cleanup of VTK elements.
+        self._hidden = QtGui.QWidget(self)
+        self._hidden.hide()
+        self.connect(self._hidden, QtCore.SIGNAL('destroyed()'), self.Finalize)
+
     def __getattr__(self, attr):
         """Makes the object behave like a vtkGenericRenderWindowInteractor"""
         if attr == '__vtk__':
@@ -191,6 +198,12 @@ class QVTKRenderWindowInteractor(QtGui.QWidget):
         else:
             raise AttributeError, self.__class__.__name__ + \
                   " has no attribute named " + attr
+
+    def Finalize(self):
+        '''
+        Call internal cleanup method on VTK objects
+        '''
+        self._RenderWindow.Finalize()
 
     def CreateTimer(self, obj, evt):
         self._Timer.start(10)
@@ -219,6 +232,9 @@ class QVTKRenderWindowInteractor(QtGui.QWidget):
         qt_cursor = self._CURSOR_MAP.get(vtk_cursor, QtCore.Qt.ArrowCursor)
         self.setCursor(qt_cursor)
 
+    def closeEvent(self, evt):
+        self.Finalize()
+
     def sizeHint(self):
         return QtCore.QSize(400, 400)
 
@@ -231,9 +247,10 @@ class QVTKRenderWindowInteractor(QtGui.QWidget):
     def resizeEvent(self, ev):
         w = self.width()
         h = self.height()
-
-        self._RenderWindow.SetSize(w, h)
+        vtk.vtkRenderWindow.SetSize(self._RenderWindow, w, h)
         self._Iren.SetSize(w, h)
+        self._Iren.ConfigureEvent()
+        self.update()
 
     def _GetCtrlShift(self, ev):
         ctrl = shift = False
@@ -367,7 +384,7 @@ def QVTKRenderWidgetConeExample():
     cone.SetResolution(8)
 
     coneMapper = vtk.vtkPolyDataMapper()
-    coneMapper.SetInput(cone.GetOutput())
+    coneMapper.SetInputConnection(cone.GetOutputPort())
 
     coneActor = vtk.vtkActor()
     coneActor.SetMapper(coneMapper)

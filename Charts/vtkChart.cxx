@@ -15,6 +15,7 @@
 
 #include "vtkChart.h"
 #include "vtkAxis.h"
+#include "vtkBrush.h"
 #include "vtkTransform2D.h"
 #include "vtkContextMouseEvent.h"
 
@@ -50,6 +51,7 @@ vtkChart::vtkChart()
   this->Point1[1] = 0;
   this->Point2[0] = 0;
   this->Point2[1] = 0;
+  this->Size.Set(0, 0, 0, 0);
   this->ShowLegend = false;
   this->TitleProperties = vtkTextProperty::New();
   this->TitleProperties->SetJustificationToCentered();
@@ -57,13 +59,23 @@ vtkChart::vtkChart()
   this->TitleProperties->SetFontSize(12);
   this->TitleProperties->SetFontFamilyToArial();
   this->AnnotationLink = NULL;
-  this->AutoSize = true;
+  this->LayoutStrategy = vtkChart::FILL_SCENE;
   this->RenderEmpty = false;
+  this->BackgroundBrush = vtkSmartPointer<vtkBrush>::New();
+  this->BackgroundBrush->SetColorF(1, 1, 1, 0);
+  this->SelectionMode = vtkContextScene::SELECTION_NONE;
 }
 
 //-----------------------------------------------------------------------------
 vtkChart::~vtkChart()
 {
+  for(int i=0; i < 4; i++)
+    {
+    if(this->GetAxis(i))
+      {
+      this->GetAxis(i)->RemoveObservers(vtkChart::UpdateRange);
+      }
+    }
   this->TitleProperties->Delete();
   if (this->AnnotationLink)
     {
@@ -140,7 +152,6 @@ void vtkChart::RecalculateBounds()
 {
   return;
 }
-
 //-----------------------------------------------------------------------------
 void vtkChart::SetShowLegend(bool visible)
 {
@@ -268,7 +279,7 @@ vtkRectf vtkChart::GetSize()
 
 void vtkChart::SetActionToButton(int action, int button)
 {
-  if (action < 0 || action > 2)
+  if (action < -1 || action > 2)
     {
     vtkErrorMacro("Error, invalid action value supplied: " << action)
     return;
@@ -304,6 +315,28 @@ int vtkChart::GetClickActionToButton(int action)
 }
 
 //-----------------------------------------------------------------------------
+void vtkChart::SetBackgroundBrush(vtkBrush *brush)
+{
+  if(brush == NULL)
+    {
+    // set to transparent white if brush is null
+    this->BackgroundBrush->SetColorF(1, 1, 1, 0);
+    }
+  else
+    {
+    this->BackgroundBrush = brush;
+    }
+
+  this->Modified();
+}
+
+//-----------------------------------------------------------------------------
+vtkBrush* vtkChart::GetBackgroundBrush()
+{
+  return this->BackgroundBrush.GetPointer();
+}
+
+//-----------------------------------------------------------------------------
 void vtkChart::PrintSelf(ostream &os, vtkIndent indent)
 {
   this->Superclass::PrintSelf(os, indent);
@@ -314,4 +347,43 @@ void vtkChart::PrintSelf(ostream &os, vtkIndent indent)
      << endl;
   os << indent << "Width: " << this->Geometry[0] << endl
      << indent << "Height: " << this->Geometry[1] << endl;
+  os << indent << "SelectionMode: " << this->SelectionMode << endl;
+}
+//-----------------------------------------------------------------------------
+void vtkChart::AttachAxisRangeListener(vtkAxis* axis)
+{
+  axis->AddObserver(vtkChart::UpdateRange, this, &vtkChart::AxisRangeForwarderCallback);
+}
+
+//-----------------------------------------------------------------------------
+void vtkChart::AxisRangeForwarderCallback(vtkObject*, unsigned long, void*)
+{
+  double fullAxisRange[8];
+  for(int i=0; i < 4; i++)
+    {
+    this->GetAxis(i)->GetRange(&fullAxisRange[i*2]);
+    }
+  this->InvokeEvent(vtkChart::UpdateRange, fullAxisRange);
+}
+
+//-----------------------------------------------------------------------------
+void vtkChart::SetSelectionMode(int selMode)
+  {
+  if (this->SelectionMode == selMode ||
+    selMode < vtkContextScene::SELECTION_NONE ||
+    selMode > vtkContextScene::SELECTION_TOGGLE)
+    {
+    return;
+    }
+  this->SelectionMode = selMode;
+  if(this->SelectionMode == vtkContextScene::SELECTION_NONE)
+    {
+    this->SetActionToButton(vtkChart::PAN, vtkContextMouseEvent::LEFT_BUTTON);
+    this->SetActionToButton(vtkChart::SELECT, vtkContextMouseEvent::RIGHT_BUTTON);
+    }
+  else
+    {
+    this->SetActionToButton(vtkChart::SELECT, vtkContextMouseEvent::LEFT_BUTTON);
+    }
+  this->Modified();
 }

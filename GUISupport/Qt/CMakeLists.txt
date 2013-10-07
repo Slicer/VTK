@@ -12,6 +12,8 @@ SET(QVTKLibSrcs
     QVTKPaintEngine.h
     vtkQtAbstractModelAdapter.cxx
     vtkQtAnnotationLayersModelAdapter.cxx
+    vtkQtDebugLeaksModel.cxx
+    vtkQtDebugLeaksView.cxx
     vtkQtSQLDatabase.cxx
     vtkQtSQLQuery.cxx
     vtkQtTableModelAdapter.cxx
@@ -28,6 +30,8 @@ SET(QVTKMocHeaders
     QFilterTreeProxyModel.h
     vtkQtAbstractModelAdapter.h
     vtkQtAnnotationLayersModelAdapter.h
+    vtkQtDebugLeaksModel.h
+    vtkQtDebugLeaksView.h
     vtkQtTableModelAdapter.h
     vtkQtTreeModelAdapter.h
     )
@@ -149,6 +153,7 @@ ENDIF(VTK_LIBRARY_PROPERTIES)
 TARGET_LINK_LIBRARIES(QVTK
   ${QT_LIBRARIES}
   vtkRendering
+  vtkIO
   vtkGraphics
   vtkImaging
   vtkCommon)
@@ -161,6 +166,10 @@ ENDIF(VTK_USE_VIEWS)
 IF(VTK_USE_QVTK_QTOPENGL)
   TARGET_LINK_LIBRARIES(QVTK ${OPENGL_gl_LIBRARY})
 ENDIF(VTK_USE_QVTK_QTOPENGL)
+
+IF(VTK_USE_X)
+  TARGET_LINK_LIBRARIES(QVTK ${X11_LIBRARIES})
+ENDIF()
 
 IF(APPLE)
   IF(VTK_USE_CARBON)
@@ -186,17 +195,22 @@ if(VTK_WRAP_PYTHON_SIP)
   set(QVTK_PythonHeaders
     QVTKInteractor.h
     vtkEventQtSlotConnect.h
-    vtkQtAnnotationView.h
-    vtkQtListView.h
     vtkQtSQLDatabase.h
     vtkQtSQLQuery.h
-    vtkQtRecordView.h
-    vtkQtTableRepresentation.h
-    vtkQtTableView.h
     vtkQtTimePointUtility.h
-    vtkQtTreeView.h
-    vtkQtView.h
     )
+  if(VTK_USE_VIEWS)
+    set(QVTK_PythonHeaders ${QVTK_PythonHeaders}
+      vtkQtAnnotationView.h
+      vtkQtListView.h
+      vtkQtRecordView.h
+      vtkQtTableRepresentation.h
+      vtkQtTableView.h
+      vtkQtTreeView.h
+      vtkQtView.h
+      )
+  endif(VTK_USE_VIEWS)
+
   if(VTK_USE_QTCHARTS)
     set(QVTK_PythonHeaders ${QVTK_PythonHeaders}
       vtkQtBarChartView.h
@@ -207,15 +221,19 @@ if(VTK_WRAP_PYTHON_SIP)
       vtkQtStatisticalBoxChartView.h
       )
   endif()
-  IF(VTK_QT_USE_WEBKIT)
+  IF(VTK_USE_VIEWS AND VTK_QT_USE_WEBKIT)
     set(QVTK_PythonHeaders ${QVTK_PythonHeaders}
     vtkQtRichTextView.h
     )
-  ENDIF(VTK_QT_USE_WEBKIT)
+  ENDIF(VTK_USE_VIEWS AND VTK_QT_USE_WEBKIT)
 
   VTK_WRAP_PYTHON3(vtkQtPython QVTK_PythonSrcs "${QVTK_PythonHeaders}")
   VTK_ADD_LIBRARY(vtkQtPythonD ${QVTK_PythonSrcs})
-  TARGET_LINK_LIBRARIES(vtkQtPythonD QVTK vtkViewsPythonD vtkRenderingPythonD vtkPythonCore)
+  TARGET_LINK_LIBRARIES(vtkQtPythonD QVTK)
+  IF(VTK_USE_VIEWS)
+    TARGET_LINK_LIBRARIES(vtkQtPythonD vtkViewsPythonD)
+  ENDIF(VTK_USE_VIEWS)
+  TARGET_LINK_LIBRARIES(vtkQtPythonD vtkRenderingPythonD vtkPythonCore)
 
   PYTHON_ADD_MODULE(vtkQtPython vtkQtPythonInit.cxx)
   TARGET_LINK_LIBRARIES(vtkQtPython vtkQtPythonD)

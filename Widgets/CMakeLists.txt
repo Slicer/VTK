@@ -35,12 +35,14 @@ vtkBoundedPlanePointPlacer.cxx
 vtkBoxRepresentation.cxx
 vtkBoxWidget.cxx
 vtkBoxWidget2.cxx
+vtkBrokenLineWidget.cxx
 vtkButtonRepresentation.cxx
 vtkButtonWidget.cxx
 vtkCameraRepresentation.cxx
 vtkCameraWidget.cxx
 vtkCaptionRepresentation.cxx
 vtkCaptionWidget.cxx
+vtkCellCentersPointPlacer.cxx
 vtkCenteredSliderRepresentation.cxx
 vtkCenteredSliderWidget.cxx
 vtkContinuousValueWidget.cxx
@@ -59,6 +61,7 @@ vtkDistanceRepresentation2D.cxx
 vtkDistanceRepresentation3D.cxx
 vtkEllipsoidTensorProbeRepresentation.cxx
 vtkEvent.cxx
+vtkFixedSizeHandleRepresentation3D.cxx
 vtkFocalPlanePointPlacer.cxx
 vtkHandleRepresentation.cxx
 vtkHandleWidget.cxx

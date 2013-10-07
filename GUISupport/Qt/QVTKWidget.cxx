@@ -47,7 +47,10 @@
 #include "qx11info_x11.h"
 #endif
 
-#include "vtkstd/map"
+#if defined(Q_WS_WIN)
+# include <windows.h>
+#endif
+
 #include "vtkInteractorStyleTrackballCamera.h"
 #include "vtkRenderWindow.h"
 #if defined(QVTK_USE_CARBON)
@@ -473,7 +476,7 @@ void QVTKWidget::paintEvent(QPaintEvent* )
     }
 
   iren->Render();
-  
+
   // In Qt 4.1+ let's support redirected painting
   // if redirected, let's grab the image from VTK, and paint it to the device
   QPaintDevice* device = QPainter::redirected(this);
@@ -517,6 +520,9 @@ void QVTKWidget::mouseMoveEvent(QMouseEvent* e)
   if(this->mRenWin)
     {
     mIrenAdapter->ProcessEvent(e, this->mRenWin->GetInteractor());
+
+    // Emit a mouse press event for anyone who might be interested
+    emit mouseEvent(e);
     }
 }
 
@@ -548,6 +554,9 @@ void QVTKWidget::mouseReleaseEvent(QMouseEvent* e)
   if(this->mRenWin)
     {
     mIrenAdapter->ProcessEvent(e, this->mRenWin->GetInteractor());
+
+    // Emit a mouse press event for anyone who might be interested
+    emit mouseEvent(e);
     }
 }
 
@@ -815,6 +824,17 @@ void QVTKWidget::x11_setup_window()
 
 #endif
 }
+
+#if defined(Q_WS_WIN)
+bool QVTKWidget::winEvent(MSG* msg, long*)
+{
+  if(msg->message == WM_PAINT)
+    {
+    InvalidateRect(this->winId(), NULL, FALSE);
+    }
+  return false;
+}
+#endif
 
 #if defined (QVTK_USE_CARBON)
 OSStatus QVTKWidget::DirtyRegionProcessor(EventHandlerCallRef, EventRef event, void* wid)

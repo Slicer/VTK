@@ -18,6 +18,8 @@ IF(PYTHON_EXECUTABLE)
     vtkApplyFilterCommandInternal.h
     vtkArrayData.h
     vtkArrayDataAlgorithm.h
+    vtkAtom.h
+    vtkBond.h
     vtkCellType.h
     vtkCompositeDataSetInternals.h
     vtkDataObjectCollection.h
@@ -27,11 +29,14 @@ IF(PYTHON_EXECUTABLE)
     vtkFactoredArrayDataAlgorithm.h
     vtkFilteringInformationKeyManager.h
     vtkGraphInternals.h
+    vtkImageBSplineInternals.h
     vtkImageInterpolatorInternals.h
     vtkImageIterator.h
     vtkImageProgressIterator.h
     vtkMarchingCubesCases.h
+    vtkMarchingCubesTriangleCases.h
     vtkMarchingSquaresCases.h
+    vtkMarchingSquaresLineCases.h
     vtkStructuredPoints.h
     )
 ENDIF(PYTHON_EXECUTABLE)

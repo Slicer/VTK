@@ -87,8 +87,8 @@ endif()
 #-----------------------------------------------------------------------------
 # VTK version number.  An even minor number corresponds to releases.
 SET(VTK_MAJOR_VERSION 5)
-SET(VTK_MINOR_VERSION 9)
-SET(VTK_BUILD_VERSION 0)
+SET(VTK_MINOR_VERSION 10)
+SET(VTK_BUILD_VERSION 1)
 SET(VTK_VERSION
     "${VTK_MAJOR_VERSION}.${VTK_MINOR_VERSION}.${VTK_BUILD_VERSION}")
 
@@ -204,9 +204,9 @@ ENDIF("${CMAKE_CFG_INTDIR}" STREQUAL ".")
 # Where the cxx tests are, for use in ADD_TEST
 SET(CXX_TEST_PATH ${EXECUTABLE_OUTPUT_PATH})
 IF(CMAKE_CONFIGURATION_TYPES)
-  SET(CXX_TEST_CONFIG \${CTEST_CONFIGURATION_TYPE})
+  SET(CXX_TEST_CONFIG /\${CTEST_CONFIGURATION_TYPE})
 ELSE()
-  SET(CXX_TEST_CONFIG .)
+  SET(CXX_TEST_CONFIG "")
 ENDIF()
 
 #-----------------------------------------------------------------------------
@@ -233,6 +233,13 @@ IF(NOT VTK_INSTALL_LIB_DIR)
     ${VTK_INSTALL_ROOT}/lib/vtk-${VTK_MAJOR_VERSION}.${VTK_MINOR_VERSION}
     )
 ENDIF(NOT VTK_INSTALL_LIB_DIR)
+
+# The location in which to install misc VTK files
+IF(NOT VTK_INSTALL_SHARE_DIR)
+  SET(VTK_INSTALL_SHARE_DIR
+    ${VTK_INSTALL_ROOT}/share/vtk-${VTK_MAJOR_VERSION}.${VTK_MINOR_VERSION}
+    )
+ENDIF(NOT VTK_INSTALL_SHARE_DIR)
 
 # The location in which to install CMake scripts for packaging VTK.
 IF(NOT VTK_INSTALL_PACKAGE_DIR)
@@ -292,6 +299,7 @@ ENDIF(BUILD_SHARED_LIBS)
 # / in any install directory variables
 STRING(REGEX REPLACE "^/" "" VTK_INSTALL_LIB_DIR_CM24 "${VTK_INSTALL_LIB_DIR}")
 STRING(REGEX REPLACE "^/" "" VTK_INSTALL_BIN_DIR_CM24 "${VTK_INSTALL_BIN_DIR}")
+STRING(REGEX REPLACE "^/" "" VTK_INSTALL_SHARE_DIR_CM24 "${VTK_INSTALL_SHARE_DIR}")
 STRING(REGEX REPLACE "^/" "" VTK_INSTALL_INCLUDE_DIR_CM24 "${VTK_INSTALL_INCLUDE_DIR}")
 STRING(REGEX REPLACE "^/" "" VTK_INSTALL_PACKAGE_DIR_CM24 "${VTK_INSTALL_PACKAGE_DIR}")
 STRING(REGEX REPLACE "^/" "" VTK_INSTALL_DOXYGEN_DIR_CM24 "${VTK_INSTALL_DOXYGEN_DIR}")
@@ -349,6 +357,9 @@ VTK_DEPENDENT_OPTION(VTK_USE_GLSL_SHADERS "Build pixel and vertex shader support
 
 VTK_DEPENDENT_OPTION(VTK_USE_CHARTS "Build VTK chart support (OpenGL based)" ON
   "VTK_USE_RENDERING;VTK_USE_VIEWS" OFF)
+
+VTK_DEPENDENT_OPTION(VTK_USE_CHEMISTRY "Build VTK chemistry support" OFF
+  "VTK_USE_RENDERING" OFF)
 
 SET(VTK_DEFAULT_SHADERS_DIR
    "${VTK_BINARY_DIR}/Utilities/MaterialLibrary/Repository"
@@ -462,6 +473,10 @@ ENDIF(VTK_USE_MFC)
 IF(VTK_USE_CHARTS)
   SET(VTK_KITS ${VTK_KITS} CHARTS)
 ENDIF(VTK_USE_CHARTS)
+
+IF(VTK_USE_CHEMISTRY)
+  SET(VTK_KITS ${VTK_KITS} CHEMISTRY)
+ENDIF(VTK_USE_CHEMISTRY)
 
 #-----------------------------------------------------------------------------
 # Determine GUI.
@@ -640,7 +655,7 @@ SET(CMAKE_TESTDRIVER_BEFORE_TESTMAIN "${CMAKE_TESTDRIVER_BEFORE_TESTMAIN}
     try {")
 
 SET(CMAKE_TESTDRIVER_AFTER_TESTMAIN "    }
-    catch(vtkstd::exception& e)
+    catch(std::exception& e)
       {
       fprintf(stderr, \"Test driver caught exception: [%s]\\n\", e.what());
       result = -1;
@@ -788,8 +803,11 @@ MARK_AS_ADVANCED(VTK_OPENGL_HAS_OSMESA
 #-----------------------------------------------------------------------------
 # Provide options to use system versions of third-party libraries.
 VTK_THIRD_PARTY_OPTION(ZLIB zlib)
+
+set(HDF5_FIND_COMPONENTS "HL;C")
 VTK_THIRD_PARTY_OPTION(HDF5 hdf5)
 INCLUDE(vtkHDF5Library)
+
 IF(VTK_USE_GL2PS)
 VTK_THIRD_PARTY_OPTION(GL2PS gl2ps)
 ENDIF(VTK_USE_GL2PS)
@@ -941,35 +959,39 @@ ENDIF(VTK_USE_MPI)
 
 #-----------------------------------------------------------------------------
 # Create STL header wrappers to block warnings in the STL headers.
-FOREACH(header
-  algorithm
-  deque
-  exception
-  functional
-  iterator
-  limits
-  list
-  map
-  memory
-  new
-  numeric
-  queue
-  set
-  stack
-  stdexcept
-  string
-  utility
-  vector
-  )
-  SET(VTK_STL_HEADER "${header}")
-  CONFIGURE_FILE(${VTK_SOURCE_DIR}/Utilities/vtkstd.h.in
-                 ${VTK_BINARY_DIR}/vtkstd/${header} @ONLY IMMEDIATE)
-  IF(NOT VTK_INSTALL_NO_DEVELOPMENT)
-    INSTALL(FILES ${VTK_BINARY_DIR}/vtkstd/${header}
-      DESTINATION ${VTK_INSTALL_INCLUDE_DIR_CM24}/vtkstd
-      COMPONENT Development)
-  ENDIF(NOT VTK_INSTALL_NO_DEVELOPMENT)
-ENDFOREACH(header)
+# This is now deprecated, and should not be used. Kept for backwards compat.
+# Should be completely removed before VTK 6.0 is tagged.
+IF(NOT VTK_LEGACY_REMOVE)
+  FOREACH(header
+    algorithm
+    deque
+    exception
+    functional
+    iterator
+    limits
+    list
+    map
+    memory
+    new
+    numeric
+    queue
+    set
+    stack
+    stdexcept
+    string
+    utility
+    vector
+    )
+    SET(VTK_STL_HEADER "${header}")
+    CONFIGURE_FILE(${VTK_SOURCE_DIR}/Utilities/vtkstd.h.in
+                   ${VTK_BINARY_DIR}/vtkstd/${header} @ONLY IMMEDIATE)
+    IF(NOT VTK_INSTALL_NO_DEVELOPMENT)
+      INSTALL(FILES ${VTK_BINARY_DIR}/vtkstd/${header}
+        DESTINATION ${VTK_INSTALL_INCLUDE_DIR_CM24}/vtkstd
+        COMPONENT Development)
+    ENDIF(NOT VTK_INSTALL_NO_DEVELOPMENT)
+  ENDFOREACH(header)
+ENDIF()
 
 #-----------------------------------------------------------------------------
 # VTK utility script locations.
@@ -1362,6 +1384,9 @@ ENDIF(VTK_USE_GUISUPPORT)
 IF(VTK_USE_CHARTS)
   ADD_SUBDIRECTORY(Charts)
 ENDIF(VTK_USE_CHARTS)
+IF(VTK_USE_CHEMISTRY)
+  ADD_SUBDIRECTORY(Chemistry)
+ENDIF(VTK_USE_CHEMISTRY)
 
 # Wrapping.
 IF(VTK_WRAP_TCL)
@@ -1409,8 +1434,10 @@ IF(BUILD_TESTING)
   IF(VTK_USE_CHARTS)
     ADD_SUBDIRECTORY(Charts/Testing)
   ENDIF(VTK_USE_CHARTS)
+  IF(VTK_USE_CHEMISTRY)
+    ADD_SUBDIRECTORY(Chemistry/Testing)
+  ENDIF(VTK_USE_CHEMISTRY)
 ENDIF(BUILD_TESTING)
-
 
 # Include the examples if they are enabled.  Note that the in-tree
 # build adds tests and a custom target to build the examples project

@@ -33,6 +33,9 @@
 
 #define PREPROC_DEBUG 0
 
+/** Block size for reading files */
+#define FILE_BUFFER_SIZE 8192
+
 /** Preprocessor tokens. */
 enum _preproc_token_t
 {
@@ -724,14 +727,26 @@ static int preproc_evaluate_single(
         }
       else if (macro->IsFunction)
         {
-        /* skip function macros, and return a result of 0 */
+        /* expand function macros using the arguments */
         if (tokens->tok == '(')
           {
+          const char *args = tokens->text;
           *val = 0;
           *is_unsigned = 0;
           if (preproc_skip_parentheses(tokens) == VTK_PARSE_OK)
             {
-            return result;
+            const char *expansion;
+            expansion = vtkParsePreprocess_ExpandMacro(macro, args);
+            if (expansion)
+              {
+              result = vtkParsePreprocess_EvaluateExpression(
+                info, expansion, val, is_unsigned);
+              vtkParsePreprocess_FreeExpandedMacro(expansion);
+              return result;
+              }
+#if PREPROC_DEBUG
+            fprintf(stderr, "wrong number of macro args %d\n", __LINE__);
+#endif
             }
 #if PREPROC_DEBUG
           fprintf(stderr, "syntax error %d\n", __LINE__);
@@ -1775,10 +1790,10 @@ static int preproc_include_file(
   PreprocessInfo *info, const char *filename, int system_first)
 {
   char *tbuf;
-  size_t tbuflen = 8192;
+  size_t tbuflen = FILE_BUFFER_SIZE;
   char *line;
   size_t linelen = 80;
-  size_t i, j, n;
+  size_t i, j, n, r;
   int in_comment = 0;
   int in_quote = 0;
   int result = VTK_PARSE_OK;
@@ -1837,29 +1852,48 @@ static int preproc_include_file(
   info->IsExternal = 1;
   info->FileName = path;
 
-  tbuf = (char *)malloc(tbuflen);
+  tbuf = (char *)malloc(tbuflen+4);
   line = (char *)malloc(linelen);
 
   /* the buffer must hold a whole line for it to be processed */
   j = 0;
   i = 0;
   n = 0;
+  r = 0;
 
   do
     {
-    if (i == n)
+    if (i >= n)
       {
+      /* recycle unused lookahead chars */
+      if (r)
+        {
+        r = n + 2 - i;
+        if (r == 2)
+          {
+          tbuf[0] = tbuf[tbuflen-2];
+          tbuf[1] = tbuf[tbuflen-1];
+          }
+        else if (r == 1)
+          {
+          tbuf[0] = tbuf[tbuflen-1];
+          }
+        }
+
       /* read the next chunk of the file */
       i = 0;
       if (feof(fp))
         {
-        n = 0;
+        /* still have the lookahead chars left */
+        n = r;
+        r = 0;
         }
       else
         {
+        /* fill the remainder of the buffer */
         errno = 0;
-        i = 0;
-        while ((n = fread(tbuf, 1, tbuflen, fp)) == 0 && ferror(fp))
+        tbuflen = r + FILE_BUFFER_SIZE;
+        while ((n = fread(&tbuf[r], 1, tbuflen-r, fp)) == 0 && ferror(fp))
           {
           if (errno != EINTR)
             {
@@ -1872,6 +1906,22 @@ static int preproc_include_file(
           errno = 0;
           clearerr(fp);
           }
+
+        if (n + r < tbuflen)
+          {
+          /* this only occurs if the final fread does not fill the buffer */
+          n += r;
+          r = 0;
+          }
+        else
+          {
+          /* set a lookahead reserve of two chars */
+          n -= (2 - r);
+          r = 2;
+          }
+
+        /* guard against lookahead past last char in file */
+        tbuf[n + r] = '\0';
         }
       }
 
@@ -1879,7 +1929,7 @@ static int preproc_include_file(
     while (i < n)
       {
       /* expand line buffer as necessary */
-      if (j+4 > linelen)
+      while (j+4 > linelen)
         {
         linelen *= 2;
         line = (char *)realloc(line, linelen);
@@ -1905,7 +1955,7 @@ static int preproc_include_file(
           line[j++] = tbuf[i++];
           in_quote = 0;
           }
-        else if (tbuf[i] == '\\' && tbuf[i] == '\"')
+        else if (tbuf[i] == '\\' && tbuf[i+1] == '\"')
           {
           line[j++] = tbuf[i++];
           line[j++] = tbuf[i++];
@@ -1915,7 +1965,7 @@ static int preproc_include_file(
           line[j++] = tbuf[i++];
           }
         }
-      else if (tbuf[i] == '/' && tbuf[i] == '*')
+      else if (tbuf[i] == '/' && tbuf[i+1] == '*')
         {
         line[j++] = tbuf[i++];
         line[j++] = tbuf[i++];
@@ -2260,6 +2310,292 @@ int vtkParsePreprocess_RemoveMacro(
     }
 
   return VTK_PARSE_MACRO_UNDEFINED;
+}
+
+/**
+ * Expand a function macro
+ */
+const char *vtkParsePreprocess_ExpandMacro(
+  MacroInfo *macro, const char *argstring)
+{
+  const char *cp = argstring;
+  int n = 0;
+  int j = 0;
+  const char **values = NULL;
+  const char *pp = NULL;
+  const char *dp = NULL;
+  char *rp = NULL;
+  size_t rs = 0;
+  size_t i = 0;
+  size_t l = 0;
+  size_t k = 0;
+  int stringify = 0;
+  int depth = 1;
+  int c;
+
+  if (argstring == NULL || *cp != '(')
+    {
+    return NULL;
+    }
+
+  /* break the string into individual argument values */
+  values = (const char **)malloc(4*sizeof(const char **));
+
+  cp++;
+  values[n++] = cp;
+  while (depth > 0 && *cp != '\0')
+    {
+    while (*cp != '\0')
+      {
+      if (*cp == '\"' || *cp == '\'')
+        {
+        preproc_skip_quotes(&cp);
+        }
+      else if (cp[0] == '/' && (cp[1] == '*' || cp[1] == '/'))
+        {
+        preproc_skip_comment(&cp);
+        }
+      else if (*cp == '(')
+        {
+        cp++;
+        depth++;
+        }
+      else if (*cp == ')')
+        {
+        cp++;
+        if (--depth == 0)
+          {
+          break;
+          }
+        }
+      else if (*cp == ',')
+        {
+        cp++;
+        if (depth == 1)
+          {
+          break;
+          }
+        }
+      else if (*cp != '\0')
+        {
+        cp++;
+        }
+      }
+    if (n >= 4 && (n & (n-1)) == 0)
+      {
+      values = (const char **)realloc(
+        (char **)values, 2*n*sizeof(const char **));
+      }
+
+    values[n++] = cp;
+    }
+  --n;
+
+  /* diagnostic: print out the values */
+#if PREPROC_DEBUG
+  for (j = 0; j < n; j++)
+    {
+    size_t m = values[j+1] - values[j] - 1;
+    fprintf(stderr, "arg %i: %*.*s\n", (int)j, (int)m, (int)m, values[j]);
+    }
+#endif
+
+  /* allow whitespace as "no argument" */
+  if (macro->NumberOfArguments == 0 && n == 1)
+    {
+    cp = values[0];
+    c = *cp;
+    while (c == ' ' || c == '\n' || c == '\t' || c == '\r')
+      {
+      c = *(++cp);
+      }
+    if (cp + 1 == values[1])
+      {
+      n = 0;
+      }
+    }
+
+  if (n != macro->NumberOfArguments)
+    {
+    free((char **)values);
+#if PREPROC_DEBUG
+    fprintf(stderr, "wrong number of macro args to %s, %d != %d\n",
+            macro->Name, n, macro->NumberOfArguments);
+#endif
+    return NULL;
+    }
+
+  cp = macro->Definition;
+  dp = cp;
+  if (cp == NULL)
+    {
+    free((char **)values);
+    return NULL;
+    }
+
+  rp = (char *)malloc(128);
+  rp[0] = '\0';
+  rs = 128;
+
+  while (*cp != '\0')
+    {
+    pp = cp;
+    stringify = 0;
+    /* skip all chars that aren't part of a name */
+    while ((*cp < 'a' || *cp > 'z') &&
+           (*cp < 'A' || *cp > 'Z') &&
+           *cp != '_' && *cp != '\0')
+      {
+      if (*cp == '\'' || *cp == '\"')
+        {
+        preproc_skip_quotes(&cp);
+        dp = cp;
+        }
+      else if (*cp >= '0' && *cp <= '9')
+        {
+        preproc_skip_number(&cp);
+        dp = cp;
+        }
+      else if (*cp == '/' && (cp[1] == '/' || cp[1] == '*'))
+        {
+        preproc_skip_comment(&cp);
+        dp = cp;
+        }
+      else if (cp[0] == '#' && cp[1] == '#')
+        {
+        dp = cp;
+        while (dp > pp && (dp[-1] == ' ' || dp[-1] == '\t' ||
+                           dp[-1] == '\r' || dp[-1] == '\n'))
+          {
+          --dp;
+          }
+        cp += 2;
+        while (*cp == ' ' || *cp == '\t' || *cp == '\r' || *cp == '\n')
+          {
+          cp++;
+          }
+        break;
+        }
+      else if (*cp == '#')
+        {
+        stringify = 1;
+        dp = cp;
+        cp++;
+        while (*cp == ' ' || *cp == '\t' || *cp == '\r' || *cp == '\n')
+          {
+          cp++;
+          }
+        break;
+        }
+      else
+        {
+        cp++;
+        dp = cp;
+        }
+      }
+    l = dp - pp;
+    if (l > 0)
+      {
+      if (i + l + 1 >= rs)
+        {
+        rs += rs + i + l + 1;
+        rp = (char *)realloc(rp, rs);
+        }
+      strncpy(&rp[i], pp, l);
+      i += l;
+      rp[i] = '\0';
+      }
+
+    /* get the name */
+    pp = cp;
+    preproc_skip_name(&cp);
+    l = cp - pp;
+    if (l > 0)
+      {
+      for (j = 0; j < n; j++)
+        {
+        /* check whether the name matches an argument */
+        if (strncmp(pp, macro->Arguments[j], l) == 0 &&
+            macro->Arguments[j][l] == '\0')
+          {
+          /* substitute the argument value */
+          l = values[j+1] - values[j] - 1;
+          pp = values[j];
+          /* remove leading whitespace from argument */
+          c = *pp;
+          while (c == ' ' || c == '\n' || c == '\t' || c == '\r')
+            {
+            c = *(++pp);
+            l--;
+            }
+          /* remove trailing whitespace from argument */
+          if (l > 0)
+            {
+            c = pp[l - 1];
+            while (c == ' ' || c == '\n' || c == '\t' || c == '\r')
+              {
+              if (--l == 0)
+                {
+                break;
+                }
+              c = pp[l-1];
+              }
+            }
+          break;
+          }
+        }
+      if (stringify)
+        {
+        /* compute number of chars that will be added */
+        stringify = 2;
+        for (k = 0; k < l; k++)
+          {
+          c = pp[k];
+          if (c == '\\' || c == '\"')
+            {
+            stringify++;
+            }
+          }
+        }
+      if (i + l + stringify + 1 >= rs)
+        {
+        rs += rs + i + l + 1;
+        rp = (char *)realloc(rp, rs);
+        }
+      if (stringify)
+        {
+        rp[i++] = '\"';
+        for (k = 0; k < l; k++)
+          {
+          c = pp[k];
+          if (c == '\\' || c == '\"')
+            {
+            rp[i++] = '\\';
+            }
+          rp[i++] = c;
+          }
+        rp[i++] = '\"';
+        }
+      else
+        {
+        strncpy(&rp[i], pp, l);
+        i += l;
+        }
+      rp[i] = '\0';
+      }
+    }
+
+  free((char **)values);
+
+  return rp;
+}
+
+/**
+ * Free an expanded function macro
+ */
+void vtkParsePreprocess_FreeExpandedMacro(const char *emacro)
+{
+  free((char *)emacro);
 }
 
 /**

@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    vtkImageInterpolatorInternals.h
+  Module:    vtkInterpolatorInternals.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -12,10 +12,10 @@
      PURPOSE.  See the above copyright notice for more information.
 
 =========================================================================*/
-// .NAME vtkImageInterpolatorInternals - internals for vtkImageInterpolator
+// .NAME vtkInterpolatorInternals - internals for vtkImageInterpolator
 
-#ifndef __vtkImageInterpolatorInternals_h
-#define __vtkImageInterpolatorInternals_h
+#ifndef __vtkInterpolatorInternals_h
+#define __vtkInterpolatorInternals_h
 
 #include "vtkMath.h"
 
@@ -46,9 +46,22 @@ struct vtkInterpolationWeights : public vtkInterpolationInfo
     vtkInterpolationInfo(info) {}
 };
 
-//--------------------------------------------------------------------------
-// Make all defined methods invisible outside current translation unit
-namespace {
+// The internal math functions for the interpolators
+struct vtkInterpolationMath
+{
+  // floor with remainder (remainder can be double or float),
+  // includes a small tolerance for values just under an integer
+  template<class F>
+  static int Floor(double x, F &f);
+
+  // round function optimized for various architectures
+  static int Round(double x);
+
+  // border-handling functions for keeping index a with in bounds b, c
+  static int Clamp(int a, int b, int c);
+  static int Wrap(int a, int b, int c);
+  static int Mirror(int a, int b, int c);
+};
 
 //--------------------------------------------------------------------------
 // The 'floor' function is slow, so we want to do an integer
@@ -79,9 +92,8 @@ namespace {
 
 #define VTK_INTERPOLATE_FLOOR_TOL 7.62939453125e-06
 
-
 template<class F>
-inline int vtkInterpolateFloor(double x, F &f)
+inline int vtkInterpolationMath::Floor(double x, F &f)
 {
 #if defined VTK_INTERPOLATE_64BIT_FLOOR
   x += (103079215104.0 + VTK_INTERPOLATE_FLOOR_TOL);
@@ -105,14 +117,15 @@ inline int vtkInterpolateFloor(double x, F &f)
   f = dual.s[0]*0.0000152587890625; // 2**(-16)
   return static_cast<int>((dual.i[1]<<16)|((dual.i[0])>>16));
 #else
-  int i = vtkMath::Floor(x + VTK_INTERPOLATE_FLOOR_TOL);
+  x += VTK_INTERPOLATE_FLOOR_TOL;
+  int i = vtkMath::Floor(x);
   f = x - i;
   return i;
 #endif
 }
 
 
-inline int vtkInterpolateRound(double x)
+inline int vtkInterpolationMath::Round(double x)
 {
 #if defined VTK_INTERPOLATE_64BIT_FLOOR
   x += (103079215104.5 + VTK_INTERPOLATE_FLOOR_TOL);
@@ -139,7 +152,7 @@ inline int vtkInterpolateRound(double x)
 //----------------------------------------------------------------------------
 // Perform a clamp to limit an index to [b, c] and subtract b.
 
-inline int vtkInterpolateClamp(int a, int b, int c)
+inline int vtkInterpolationMath::Clamp(int a, int b, int c)
 {
   a = (a <= c ? a : c);
   a -= b;
@@ -150,7 +163,7 @@ inline int vtkInterpolateClamp(int a, int b, int c)
 //----------------------------------------------------------------------------
 // Perform a wrap to limit an index to [b, c] and subtract b.
 
-inline int vtkInterpolateWrap(int a, int b, int c)
+inline int vtkInterpolationMath::Wrap(int a, int b, int c)
 {
   int range = c - b + 1;
   a -= b;
@@ -163,18 +176,26 @@ inline int vtkInterpolateWrap(int a, int b, int c)
 //----------------------------------------------------------------------------
 // Perform a mirror to limit an index to [b, c] and subtract b.
 
-inline int vtkInterpolateMirror(int a, int b, int c)
+inline int vtkInterpolationMath::Mirror(int a, int b, int c)
 {
-  int range1 = c - b;
-  int range = range1 + 1;
+#ifndef VTK_IMAGE_BORDER_LEGACY_MIRROR
+  int range = c - b;
+  int ifzero = (range == 0);
+  int range2 = 2*range + ifzero;
+  a -= b;
+  a = (a >= 0 ? a : -a);
+  a %= range2;
+  a = (a <= range ? a : range2 - a);
+  return a;
+#else
+  int range = c - b + 1;
+  int range2 = 2*range;
   a -= b;
   a = (a >= 0 ? a : -a - 1);
-  int count = a/range;
-  a -= count*range;
-  a = ((count & 0x1) == 0 ? a : range1 - a);
+  a %= range2;
+  a = (a < range ? a : range2 - a - 1);
   return a;
+#endif
 }
-
-} // end anonymous namespace
 
 #endif

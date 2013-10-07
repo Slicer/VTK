@@ -22,11 +22,11 @@
 #include "vtkRenderWindow.h"
 #include "vtkRendererCollection.h"
 #include "vtkStreamingDemandDrivenPipeline.h"
-
+#include "vtkRenderWindowInteractor.h"
 #include "vtkCoordinate.h"
 #include "vtkActor2D.h"
 #include "vtkActor2DCollection.h"
-#include <vtkstd/vector>
+#include <vector>
 
 #define BORDER_PIXELS 2
 
@@ -41,8 +41,8 @@ public:
   vtkCollection        *Coord1s;
   vtkCollection        *Coord2s;
   // Store the display coords for adjustment during tiling
-  vtkstd::vector< vtkstd::pair<int, int> > Coords1;
-  vtkstd::vector< vtkstd::pair<int, int> > Coords2;
+  std::vector< std::pair<int, int> > Coords1;
+  std::vector< std::pair<int, int> > Coords2;
   //
   vtkWTI2DHelperClass()
     {
@@ -410,7 +410,17 @@ void vtkWindowToImageFilter::RequestData(
       // now render the tile and get the data
       if (this->ShouldRerender || num_iterations > 1)
         {
-        this->Input->Render();
+        // if interactor is present, trigger render through interactor. This
+        // allows for custom applications that provide interactors that
+        // customize rendering e.g. ParaView.
+        if (renWin->GetInteractor())
+          {
+          renWin->GetInteractor()->Render();
+          }
+        else
+          {
+          this->Input->Render();
+          }
         }
       this->Input->MakeCurrent();
 
@@ -622,9 +632,9 @@ void vtkWindowToImageFilter::Rescale2DActors()
           d2[1] = p2[1]*this->Magnification;
           d2[2] = 0.0;
           this->StoredData->Coords1.push_back(
-            vtkstd::pair<int, int>(static_cast<int>(d1[0]), static_cast<int>(d1[1])) );
+            std::pair<int, int>(static_cast<int>(d1[0]), static_cast<int>(d1[1])) );
           this->StoredData->Coords2.push_back(
-            vtkstd::pair<int, int>(static_cast<int>(d2[0]), static_cast<int>(d2[1])) );
+            std::pair<int, int>(static_cast<int>(d2[0]), static_cast<int>(d2[1])) );
           // Make sure they have no dodgy offsets
           n1->SetCoordinateSystemToDisplay();
           n2->SetCoordinateSystemToDisplay();

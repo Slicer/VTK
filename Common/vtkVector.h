@@ -25,45 +25,86 @@
 #ifndef __vtkVector_h
 #define __vtkVector_h
 
+#include "vtkTuple.h"
+
+#include <cmath>   // For math functions
+
 template<typename T, int Size>
-class vtkVector
+class vtkVector : public vtkTuple<T, Size>
 {
 public:
   vtkVector()
   {
-    for (int i = 0; i < Size; ++i)
-      {
-      Data[i] = 0;
-      }
   }
 
-  explicit vtkVector(const T* init)
+  // Description:
+  // Initialize all of the vector's elements with the supplied scalar.
+  explicit vtkVector(const T& scalar) : vtkTuple<T, Size>(scalar)
   {
-    for (int i = 0; i < Size; ++i)
-      {
-      Data[i] = init[i];
-      }
   }
 
   // Description:
-  // Get the size of the vtkVector.
-  int GetSize() const { return Size; }
+  // Initalize the vector's elements with the elements of the supplied array.
+  // Note that the supplied pointer must contain at least as many elements as
+  // the vector, or it will result in access to out of bounds memory.
+  explicit vtkVector(const T* init) : vtkTuple<T, Size>(init)
+  {
+  }
 
   // Description:
-  // Get a pointer to the underlying data of the vtkVector.
-  T* GetData() { return this->Data; }
-  const T* GetData() const { return this->Data; }
+  // Get the squared norm of the vector.
+  T SquaredNorm() const
+  {
+    T result = 0;
+    for (int i = 0; i < Size; ++i)
+      {
+      result += this->Data[i] * this->Data[i];
+      }
+    return result;
+  }
 
   // Description:
-  // Get a reference to the underlying data element of the vtkVector. Can be
-  // used in much the same way as vector[i] is used.
-  T& operator[](int i) { return this->Data[i]; }
-  const T& operator[](int i) const { return this->Data[i]; }
+  // Get the norm of the vector, i.e. its length.
+  double Norm() const
+  {
+    return sqrt(static_cast<double>(this->SquaredNorm()));
+  }
 
   // Description:
-  // Get the value of the vector at the index speciifed. Does bounds checking,
-  // used in much the same way as vector.at(i) is used.
-  T operator()(int i) const { return this->Data[i]; }
+  // Normalize the vector in place.
+  // \return The length of the vector.
+  double Normalize()
+  {
+    const double norm(this->Norm());
+    const double inv(1.0 / norm);
+    for (int i = 0; i < Size; ++i)
+      {
+      this->Data[i] = static_cast<T>(this->Data[i] * inv);
+      }
+    return norm;
+  }
+
+  // Description:
+  // Return the normalized form of this vector.
+  // \return The normalized form of this vector.
+  vtkVector<T, Size> Normalized() const
+  {
+    vtkVector<T, Size> temp(*this);
+    temp.Normalize();
+    return temp;
+  }
+
+  // Description:
+  // The dot product of this and the supplied vector.
+  T Dot(const vtkVector<T, Size>& other) const
+  {
+    T result(0);
+    for (int i = 0; i < Size; ++i)
+      {
+      result += this->Data[i] * other[i];
+      }
+    return result;
+  }
 
   // Description:
   // Cast the vector to the specified type, returning the result.
@@ -73,15 +114,10 @@ public:
     vtkVector<TR, Size> result;
     for (int i = 0; i < Size; ++i)
       {
-      result[i] = static_cast<TR>(Data[i]);
+      result[i] = static_cast<TR>(this->Data[i]);
       }
     return result;
   }
-
-protected:
-  // Description:
-  // The only thing stored in memory!
-  T Data[Size];
 };
 
 // .NAME vtkVector2 - templated base type for storage of 2D vectors.
@@ -90,14 +126,22 @@ template<typename T>
 class vtkVector2 : public vtkVector<T, 2>
 {
 public:
-  vtkVector2(const T& x = 0, const T& y = 0)
+  vtkVector2()
   {
-    this->Data[0] = x;
-    this->Data[1] = y;
+  }
+
+  explicit vtkVector2(const T& scalar) : vtkVector<T, 2>(scalar)
+  {
   }
 
   explicit vtkVector2(const T* init) : vtkVector<T, 2>(init)
   {
+  }
+
+  vtkVector2(const T& x, const T& y)
+  {
+    this->Data[0] = x;
+    this->Data[1] = y;
   }
 
   // Description:
@@ -133,14 +177,24 @@ template<typename T>
 class vtkVector3 : public vtkVector<T, 3>
 {
 public:
-  vtkVector3(const T& x = 0, const T& y = 0, const T& z = 0)
+  vtkVector3()
+  {
+  }
+
+  explicit vtkVector3(const T& scalar) : vtkVector<T, 3>(scalar)
+  {
+  }
+
+  explicit vtkVector3(const T* init) : vtkVector<T, 3>(init)
+  {
+  }
+
+  vtkVector3(const T& x, const T& y, const T& z)
   {
     this->Data[0] = x;
     this->Data[1] = y;
     this->Data[2] = z;
   }
-
-  explicit vtkVector3(const T* init) : vtkVector<T, 3>(init) { }
 
   // Description:
   // Set the x, y and z components of the vector.
@@ -178,62 +232,99 @@ public:
   const T& GetZ() const { return this->Data[2]; }
   const T& Z() const { return this->Data[2]; }
 
+  // Description:
+  // Return the cross product of this X other.
+  vtkVector3<T> Cross(const vtkVector3& other) const
+  {
+    vtkVector3<T> res;
+    res[0] = this->Data[1] * other.Data[2] - this->Data[2] * other.Data[1];
+    res[1] = this->Data[2] * other.Data[0] - this->Data[0] * other.Data[2];
+    res[2] = this->Data[0] * other.Data[1] - this->Data[1] * other.Data[0];
+    return res;
+  }
+
 };
+
+// Description:
+// Some inline functions for the derived types.
+#define vtkVectorNormalized(vectorType, type, size) \
+vectorType Normalized() \
+{ \
+  return vectorType(vtkVector<type, size>::Normalized().GetData()); \
+} \
+
+#define vtkVectorDerivedMacro(vectorType, type, size) \
+vtkVectorNormalized(vectorType, type, size) \
 
 // Description:
 // Some derived classes for the different vectors commonly used.
 class vtkVector2i : public vtkVector2<int>
 {
 public:
-  vtkVector2i(int x = 0, int y = 0) : vtkVector2<int>(x, y) {}
+  vtkVector2i() {}
+  vtkVector2i(int x, int y) : vtkVector2<int>(x, y) {}
+  explicit vtkVector2i(int scalar) : vtkVector2<int>(scalar) {}
   explicit vtkVector2i(const int *init) : vtkVector2<int>(init) {}
+  vtkVectorDerivedMacro(vtkVector2i, int, 2)
 };
 
 class vtkVector2f : public vtkVector2<float>
 {
 public:
-  vtkVector2f(float x = 0.0, float y = 0.0) : vtkVector2<float>(x, y) {}
-  vtkVector2f(const float* i) : vtkVector2<float>(i) {}
+  vtkVector2f() {}
+  vtkVector2f(float x, float y) : vtkVector2<float>(x, y) {}
+  explicit vtkVector2f(float scalar) : vtkVector2<float>(scalar) {}
+  explicit vtkVector2f(const float* i) : vtkVector2<float>(i) {}
+  vtkVectorDerivedMacro(vtkVector2f, float, 2)
 };
 
 class vtkVector2d : public vtkVector2<double>
 {
 public:
-  vtkVector2d(double x = 0.0, double y = 0.0) : vtkVector2<double>(x, y) {}
+  vtkVector2d() {}
+  vtkVector2d(double x, double y) : vtkVector2<double>(x, y) {}
+  explicit vtkVector2d(double scalar) : vtkVector2<double>(scalar) {}
   explicit vtkVector2d(const double *init) : vtkVector2<double>(init) {}
+  vtkVectorDerivedMacro(vtkVector2d, double, 2)
 };
+
+#define vtkVector3Cross(vectorType, type) \
+vectorType Cross(const vectorType& other) \
+{ \
+  return vectorType(vtkVector3<type>::Cross(other).GetData()); \
+} \
 
 class vtkVector3i : public vtkVector3<int>
 {
 public:
-  vtkVector3i(int x = 0, int y = 0, int z = 0) : vtkVector3<int>(x, y, z) {}
+  vtkVector3i() {}
+  vtkVector3i(int x, int y, int z) : vtkVector3<int>(x, y, z) {}
+  explicit vtkVector3i(int scalar) : vtkVector3<int>(scalar) {}
   explicit vtkVector3i(const int *init) : vtkVector3<int>(init) {}
+  vtkVectorDerivedMacro(vtkVector3i, int, 3)
+  vtkVector3Cross(vtkVector3i, int)
 };
 
 class vtkVector3f : public vtkVector3<float>
 {
 public:
-  vtkVector3f(float x = 0.0, float y = 0.0, float z = 0.0)
-    : vtkVector3<float>(x, y, z) {}
+  vtkVector3f() {}
+  vtkVector3f(float x, float y, float z) : vtkVector3<float>(x, y, z) {}
+  explicit vtkVector3f(float scalar) : vtkVector3<float>(scalar) {}
   explicit vtkVector3f(const float *init) : vtkVector3<float>(init) {}
+  vtkVectorDerivedMacro(vtkVector3f, float, 3)
+  vtkVector3Cross(vtkVector3f, float)
 };
 
 class vtkVector3d : public vtkVector3<double>
 {
 public:
-  vtkVector3d(double x = 0.0, double y = 0.0, double z = 0.0)
-    : vtkVector3<double>(x, y, z) {}
+  vtkVector3d() {}
+  vtkVector3d(double x, double y, double z) : vtkVector3<double>(x, y, z) {}
+  explicit vtkVector3d(double scalar) : vtkVector3<double>(scalar) {}
   explicit vtkVector3d(const double *init) : vtkVector3<double>(init) {}
+  vtkVectorDerivedMacro(vtkVector3d, double, 3)
+  vtkVector3Cross(vtkVector3d, double)
 };
-
-// Some operators for easy addition etc
-inline const vtkVector2f operator+(const vtkVector2f &lhs, const vtkVector2f &rhs)
-{
-  return vtkVector2f(lhs[0] + rhs[0], lhs[1] + rhs[1]);
-}
-inline const vtkVector2f operator-(const vtkVector2f &lhs, const vtkVector2f &rhs)
-{
-  return vtkVector2f(lhs[0] - rhs[0], lhs[1] - rhs[1]);
-}
 
 #endif // __vtkVector_h

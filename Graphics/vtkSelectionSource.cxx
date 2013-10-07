@@ -28,24 +28,24 @@
 #include "vtkTrivialProducer.h"
 #include "vtkUnsignedIntArray.h"
 
-#include "vtkstd/vector"
-#include "vtkstd/set"
+#include <vector>
+#include <set>
 
 vtkStandardNewMacro(vtkSelectionSource);
 
 class vtkSelectionSourceInternals
 {
 public:
-  typedef vtkstd::set<vtkIdType> IDSetType;
-  typedef vtkstd::vector<IDSetType> IDsType;
+  typedef std::set<vtkIdType> IDSetType;
+  typedef std::vector<IDSetType> IDsType;
   IDsType IDs;
   
-  typedef vtkstd::set<vtkStdString> StringIDSetType;
-  typedef vtkstd::vector<StringIDSetType> StringIDsType;
+  typedef std::set<vtkStdString> StringIDSetType;
+  typedef std::vector<StringIDSetType> StringIDsType;
   StringIDsType StringIDs;
 
-  vtkstd::vector<double> Thresholds;
-  vtkstd::vector<double> Locations;
+  std::vector<double> Thresholds;
+  std::vector<double> Locations;
   IDSetType Blocks;
   double Frustum[32];
 };
@@ -69,6 +69,7 @@ vtkSelectionSource::vtkSelectionSource()
   this->CompositeIndex = -1;
   this->HierarchicalLevel = -1;
   this->HierarchicalIndex = -1;
+  this->QueryString = 0;
 }
 
 //----------------------------------------------------------------------------
@@ -79,6 +80,7 @@ vtkSelectionSource::~vtkSelectionSource()
     {
     delete[] this->ArrayName;
     }
+  delete[] this->QueryString;
 }
 
 //----------------------------------------------------------------------------
@@ -254,6 +256,7 @@ void vtkSelectionSource::PrintSelf(ostream& os, vtkIndent indent)
   os << indent << "CompositeIndex: " << this->CompositeIndex << endl;
   os << indent << "HierarchicalLevel: " << this->HierarchicalLevel << endl;
   os << indent << "HierarchicalIndex: " << this->HierarchicalIndex << endl;
+  os << indent << "QueryString: " << (this->QueryString ? this->QueryString : "NULL") << endl;
 }
 
 //----------------------------------------------------------------------------
@@ -433,7 +436,7 @@ int vtkSelectionSource::RequestData(
     selectionList->SetNumberOfComponents(3);
     selectionList->SetNumberOfValues(this->Internal->Locations.size());
 
-    vtkstd::vector<double>::iterator iter =
+    std::vector<double>::iterator iter =
       this->Internal->Locations.begin();
     for (vtkIdType cc=0;
       iter != this->Internal->Locations.end(); ++iter, ++cc)
@@ -458,7 +461,7 @@ int vtkSelectionSource::RequestData(
     selectionList->SetNumberOfComponents(1);
     selectionList->SetNumberOfValues(this->Internal->Thresholds.size());
 
-    vtkstd::vector<double>::iterator iter =
+    std::vector<double>::iterator iter =
       this->Internal->Thresholds.begin();
     for (vtkIdType cc=0;
       iter != this->Internal->Thresholds.end(); ++iter, ++cc)
@@ -502,6 +505,13 @@ int vtkSelectionSource::RequestData(
       }
     output->SetSelectionList(selectionList);
     selectionList->Delete();
+    }
+
+  if(this->ContentType == vtkSelectionNode::QUERY)
+    {
+    oProperties->Set(vtkSelectionNode::CONTENT_TYPE(), this->ContentType);
+    oProperties->Set(vtkSelectionNode::FIELD_TYPE(), this->FieldType);
+    output->SetQueryString(this->QueryString);
     }
 
   oProperties->Set(vtkSelectionNode::CONTAINING_CELLS(),

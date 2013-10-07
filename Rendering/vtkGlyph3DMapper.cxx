@@ -36,7 +36,7 @@
 #include "vtkTransform.h"
 
 #include <assert.h>
-#include <vtkstd/vector>
+#include <vector>
 
 vtkInstantiatorNewMacro(vtkGlyph3DMapper);
 
@@ -73,16 +73,19 @@ vtkGlyph3DMapper::vtkGlyph3DMapper()
   this->Orient = true;
   this->Clamping = false;
   this->SourceIndexing = false;
+  this->UseSelectionIds = false;
   this->OrientationMode = vtkGlyph3DMapper::DIRECTION;
 
   // Set default arrays.
   this->SetScaleArray(vtkDataSetAttributes::SCALARS);
   this->SetMaskArray(vtkDataSetAttributes::SCALARS);
   this->SetOrientationArray(vtkDataSetAttributes::VECTORS);
+  this->SetSelectionIdArray(vtkDataSetAttributes::SCALARS);
 
   this->NestedDisplayLists = true;
 
   this->Masking = false;
+  this->SelectMode=1;
   this->SelectionColorId=1;
 }
 
@@ -194,6 +197,33 @@ vtkDataArray* vtkGlyph3DMapper::GetSourceIndexArray(vtkDataSet* input)
       vtkGlyph3DMapper::SOURCE_INDEX, input, association);
     }
   return 0;
+}
+
+// ---------------------------------------------------------------------------
+void vtkGlyph3DMapper::SetSelectionIdArray(const char* selectionIdArrayName)
+{
+  this->SetInputArrayToProcess(vtkGlyph3DMapper::SELECTIONID, 0, 0,
+    vtkDataObject::FIELD_ASSOCIATION_POINTS, selectionIdArrayName);
+}
+
+// ---------------------------------------------------------------------------
+void vtkGlyph3DMapper::SetSelectionIdArray(int fieldAttributeType)
+{
+  this->SetInputArrayToProcess(vtkGlyph3DMapper::SELECTIONID, 0, 0,
+    vtkDataObject::FIELD_ASSOCIATION_POINTS, fieldAttributeType);
+}
+
+// ---------------------------------------------------------------------------
+vtkDataArray* vtkGlyph3DMapper::GetSelectionIdArray(vtkDataSet* input)
+{
+  if (this->UseSelectionIds)
+    {
+    int association = vtkDataObject::FIELD_ASSOCIATION_POINTS;
+    vtkDataArray* arr = this->GetInputArrayToProcess(
+          vtkGlyph3DMapper::SELECTIONID, input, association);
+    return arr;
+    }
+  return NULL;
 }
 
 // ---------------------------------------------------------------------------
@@ -345,6 +375,8 @@ void vtkGlyph3DMapper::PrintSelf(ostream& os, vtkIndent indent)
     << this->GetOrientationModeAsString() << "\n";
   os << indent << "SourceIndexing: "
     << (this->SourceIndexing? "On" : "Off") << endl;
+  os << indent << "UseSelectionIds: "
+     << (this->UseSelectionIds? "On" : "Off") << endl;
   os << indent << "SelectMode: " << this->SelectMode << endl;
   os << indent << "SelectionColorId: " << this->SelectionColorId << endl;
   os << "Masking: " << (this->Masking? "On" : "Off") << endl;

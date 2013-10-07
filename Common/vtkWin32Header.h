@@ -102,9 +102,15 @@ Do_not_include_vtkWin32Header_directly__vtkSystemIncludes_includes_it;
 #  define vtkGetWindowLong GetWindowLong
 #  define vtkSetWindowLong SetWindowLong
 #  define vtkLONG LONG
+#  ifdef _WIN64
+#    define vtkGWL_WNDPROC GWLP_WNDPROC
+#    define vtkGWL_HINSTANCE GWLP_HINSTANCE
+#    define vtkGWL_USERDATA GWLP_USERDATA
+#  else
 #  define vtkGWL_WNDPROC GWL_WNDPROC
 #  define vtkGWL_HINSTANCE GWL_HINSTANCE
 #  define vtkGWL_USERDATA GWL_USERDATA
+#  endif
 #endif //
 
 #endif
@@ -257,6 +263,12 @@ Do_not_include_vtkWin32Header_directly__vtkSystemIncludes_includes_it;
   #define VTK_CHARTS_EXPORT VTK_ABI_IMPORT
  #endif
 
+ #if defined(vtkChemistry_EXPORTS)
+  #define VTK_CHEMISTRY_EXPORT VTK_ABI_EXPORT
+ #else
+  #define VTK_CHEMISTRY_EXPORT VTK_ABI_IMPORT
+ #endif
+
 #else
  #define VTK_COMMON_EXPORT
  #define VTK_FILTERING_EXPORT
@@ -275,6 +287,7 @@ Do_not_include_vtkWin32Header_directly__vtkSystemIncludes_includes_it;
  #define VTK_PARALLEL_EXPORT
  #define VTK_VIEWS_EXPORT
  #define VTK_CHARTS_EXPORT
+ #define VTK_CHEMISTRY_EXPORT
  #define VTK_EXPORT
 #endif
 

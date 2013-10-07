@@ -639,7 +639,11 @@ void vtkContext2D::ApplyPen(vtkPen *pen)
 //-----------------------------------------------------------------------------
 vtkPen* vtkContext2D::GetPen()
 {
-  return this->Device->GetPen();
+  if (this->Device)
+    {
+    return this->Device->GetPen();
+    }
+  return NULL;
 }
 
 //-----------------------------------------------------------------------------
@@ -651,7 +655,11 @@ void vtkContext2D::ApplyBrush(vtkBrush *brush)
 //-----------------------------------------------------------------------------
 vtkBrush* vtkContext2D::GetBrush()
 {
-  return this->Device->GetBrush();
+  if (this->Device)
+    {
+    return this->Device->GetBrush();
+    }
+  return NULL;
 }
 
 //-----------------------------------------------------------------------------
@@ -663,7 +671,11 @@ void vtkContext2D::ApplyTextProp(vtkTextProperty *prop)
 //-----------------------------------------------------------------------------
 vtkTextProperty* vtkContext2D::GetTextProp()
 {
-  return this->Device->GetTextProp();
+  if (this->Device)
+    {
+    return this->Device->GetTextProp();
+    }
+  return NULL;
 }
 
 //-----------------------------------------------------------------------------
@@ -678,8 +690,12 @@ void vtkContext2D::SetTransform(vtkTransform2D *transform)
 //-----------------------------------------------------------------------------
 vtkTransform2D* vtkContext2D::GetTransform()
 {
-  this->Device->GetMatrix(this->Transform->GetMatrix());
-  return this->Transform;
+  if (this->Device && this->Transform)
+    {
+    this->Device->GetMatrix(this->Transform->GetMatrix());
+    return this->Transform;
+    }
+  return NULL;
 }
 
 //-----------------------------------------------------------------------------
@@ -741,7 +757,7 @@ vtkVector2f vtkContext2D::CalculateTextPosition(vtkPoints2D* rect)
     return vtkVector2f();
     }
 
-  vtkVector2f p;
+  vtkVector2f p(0, 0);
   float *f = vtkFloatArray::SafeDownCast(rect->GetData())->GetPointer(0);
 
   if (this->Device->GetTextProp()->GetJustification() == VTK_TEXT_LEFT)
