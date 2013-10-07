@@ -909,8 +909,29 @@ void vtkScalarBarActor::AllocateAndSizeLabels(int *labelSize,
         val = range[0] + 0.5*(range[1]-range[0]);
         }
       }
-
-    sprintf(string, this->LabelFormat, val);
+    
+    // if the lookuptable uses the new annotation functionality in VTK6.0
+    // then use it as labels
+    if (this->LookupTable->GetNumberOfAnnotatedValues() > 1)
+      {
+      double indx = 0.0;
+      int index  = 0;
+      if (this->NumberOfLabels > 1)
+        {
+        indx = static_cast<double>(i)/(this->NumberOfLabels-1)*(this->LookupTable->GetNumberOfAnnotatedValues()-1);
+        }
+      else
+        {
+        indx = 0.5*this->LookupTable->GetNumberOfAnnotatedValues();
+        }
+      index = static_cast<int>(indx+0.5);
+      sprintf(string, this->LabelFormat, this->LookupTable->GetAnnotation(index).c_str());
+      }
+    else
+      {
+      sprintf(string, this->LabelFormat, val);
+      }
+    
     this->TextMappers[i]->SetInput(string);
 
     // Shallow copy here so that the size of the label prop is not affected
