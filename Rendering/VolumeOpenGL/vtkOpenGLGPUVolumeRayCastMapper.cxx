@@ -35,6 +35,7 @@
 
 #include <math.h>
 
+#include <algorithm>
 #include <string>
 #include <map>
 #include <vector>
