@@ -73,7 +73,7 @@ they are system headers.  Do NOT add any #undef lines here.  */
 #endif
 
 #if defined(_MSC_VER) && _MSC_VER >= 1800
-#define HAVE_ROUND
+#define HAVE_ROUND 1
 #endif
 
 #include <Python.h>
