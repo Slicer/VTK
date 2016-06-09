@@ -10,7 +10,7 @@
 
 package require vtk
 
-# Create a reader to read the unstructured grid data. We use a 
+# Create a reader to read the unstructured grid data. We use a
 # vtkDataSetReader which means the type of the output is unknown until
 # the data file is read. SO we follow the reader with a vtkCastToConcrete
 # and cast the output to vtkUnstructuredGrid.
@@ -21,7 +21,7 @@ vtkDataSetReader reader
 vtkCastToConcrete castToUnstructuredGrid
     castToUnstructuredGrid SetInputConnection [reader GetOutputPort]
 vtkWarpVector warp
-    warp SetInput [castToUnstructuredGrid GetUnstructuredGridOutput]
+    warp SetInputConnection [castToUnstructuredGrid GetOutputPort]
 
 # The connectivity filter extracts the first two regions. These are
 # know to represent the mold.
@@ -87,3 +87,4 @@ iren Initialize
 
 # prevent the tk window from showing up then start the event loop
 wm withdraw .
+iren Start

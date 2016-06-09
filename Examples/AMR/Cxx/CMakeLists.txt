@@ -1,12 +1,42 @@
+cmake_minimum_required(VERSION 2.8.5 FATAL_ERROR)
+if(POLICY CMP0025)
+  cmake_policy(SET CMP0025 NEW) # CMake 3.0
+endif()
+if(POLICY CMP0053)
+  cmake_policy(SET CMP0053 NEW) # CMake 3.1
+endif()
+
 PROJECT (AMR)
 
-IF(NOT VTK_BINARY_DIR)
-FIND_PACKAGE(VTK REQUIRED)
-IF(NOT VTK_USE_RENDERING)
-  MESSAGE(FATAL_ERROR "Example ${PROJECT_NAME} requires VTK_USE_RENDERING.")
-ENDIF(NOT VTK_USE_RENDERING)
-INCLUDE(${VTK_USE_FILE})
-ENDIF(NOT VTK_BINARY_DIR)
+if(NOT VTK_SOURCE_DIR)
+  message(ERROR " Cannot build AMR examples without VTK_SOURCE_DIR")
+endif()
 
-ADD_EXECUTABLE(HierarchicalBoxPipeline HierarchicalBoxPipeline.cxx)
-TARGET_LINK_LIBRARIES(HierarchicalBoxPipeline vtkRendering vtkIO)
+find_package(VTK COMPONENTS
+  vtkCommonCore
+  vtkFiltersAMR
+  vtkFiltersExtraction
+  vtkFiltersGeometry
+  vtkFiltersSources
+  vtkIOLegacy
+  vtkIOXML
+  vtkInteractionStyle
+  vtkRendering${VTK_RENDERING_BACKEND}
+  vtkTestingCore
+)
+include(${VTK_USE_FILE})
+
+include_directories(
+  ${VTK_SOURCE_DIR}/Testing/Core
+)
+
+## Add HierarchicalBoxPipeline executable
+add_executable(HierarchicalBoxPipeline MACOSX_BUNDLE HierarchicalBoxPipeline.cxx)
+target_link_libraries(HierarchicalBoxPipeline ${VTK_LIBRARIES})
+
+## Add AMR examples
+add_executable( Generate3DAMRDataSetWithPulse MACOSX_BUNDLE Generate3DAMRDataSetWithPulse.cxx)
+target_link_libraries( Generate3DAMRDataSetWithPulse ${VTK_LIBRARIES})
+
+add_executable( Generate2DAMRDataSetWithPulse MACOSX_BUNDLE Generate2DAMRDataSetWithPulse.cxx)
+target_link_libraries(Generate2DAMRDataSetWithPulse ${VTK_LIBRARIES})

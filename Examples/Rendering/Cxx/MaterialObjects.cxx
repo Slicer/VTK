@@ -25,11 +25,10 @@
 #include "vtkRenderWindow.h"
 #include "vtkRenderWindowInteractor.h"
 #include "vtkProperty.h"
-#include "vtkShaderProgram.h"
 #include "vtkCamera.h"
 #include "vtkLight.h"
 
-#include <vtkstd/vector>
+#include <vector>
 
 
 
@@ -49,25 +48,25 @@ vtkActor* makeActor( const char* type, const char* material )
     vtkTexturedSphereSource *sphere = vtkTexturedSphereSource::New();
     sphere->SetThetaResolution(25);
     sphere->SetPhiResolution(25);
-    mapper->SetInput(sphere->GetOutput());
+    mapper->SetInputConnection(sphere->GetOutputPort());
     sphere->Delete();
     }
   else if( strcmp(type,"cube")==0 )
     {
     vtkCubeSource *cube= vtkCubeSource::New();
-    mapper->SetInput(cube->GetOutput());
+    mapper->SetInputConnection(cube->GetOutputPort());
     cube->Delete();
     }
   else if( strcmp(type,"cylinder")==0 )
     {
     vtkCylinderSource *cylinder= vtkCylinderSource::New();
-    mapper->SetInput(cylinder->GetOutput());
+    mapper->SetInputConnection(cylinder->GetOutputPort());
     cylinder->Delete();
     }
   else if( strcmp(type,"plane")==0 )
     {
     vtkPlaneSource *plane= vtkPlaneSource::New();
-    mapper->SetInput(plane->GetOutput());
+    mapper->SetInputConnection(plane->GetOutputPort());
     plane->Delete();
     }
 
@@ -105,7 +104,7 @@ vtkActor* makeActor( const char* type, const char* material )
 
 }
 
-void gridLayoutActors( vtkstd::vector<vtkActor*> actors )
+void gridLayoutActors( std::vector<vtkActor*> actors )
 {
   if( (int)actors.size() <= 1 )
     {
@@ -114,8 +113,8 @@ void gridLayoutActors( vtkstd::vector<vtkActor*> actors )
 
   double bounds[6] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
 
-  vtkstd::vector<vtkActor*>::iterator it = actors.begin();
-  vtkstd::vector<vtkActor*>::iterator itEnd = actors.end();
+  std::vector<vtkActor*>::iterator it = actors.begin();
+  std::vector<vtkActor*>::iterator itEnd = actors.end();
   while( it != itEnd )
     {
     // move to the origin
@@ -160,7 +159,7 @@ void gridLayoutActors( vtkstd::vector<vtkActor*> actors )
 #if 0
         cout << id << " : ";
         cout << actors[id]->GetPosition()[0] << " , ";
-        cout << actors[id]->GetPosition()[1] << " , "; 
+        cout << actors[id]->GetPosition()[1] << " , ";
         cout << actors[id]->GetPosition()[2] << endl;
 #endif
         }
@@ -201,8 +200,8 @@ int main(int argc, char* argv[])
   cout << "Syntax: MaterialObjects material0 material1 ... materialn" << endl;
   cout << "Apply the nth material to the nth sphere, 0 <= n <= 7" << endl;
 
-  vtkstd::vector<int> geom;
-  vtkstd::vector<int> mat;
+  std::vector<int> geom;
+  std::vector<int> mat;
   int numActors = 0;
   int count=0;
   int i = 0;
@@ -222,7 +221,7 @@ int main(int argc, char* argv[])
       }
     }
 
-  vtkstd::vector<vtkActor*> actors;
+  std::vector<vtkActor*> actors;
   i = 0;
   for( i=0; i<numActors; i++ )
     {
@@ -239,7 +238,7 @@ int main(int argc, char* argv[])
   gridLayoutActors( actors );
 
 
-  // Create the graphics structure. The renderer renders into the 
+  // Create the graphics structure. The renderer renders into the
   // render window. The render window interactor captures mouse events
   // and will perform appropriate camera or actor manipulation
   // depending on the nature of the events.
@@ -251,8 +250,8 @@ int main(int argc, char* argv[])
   iren->SetRenderWindow(renWin);
 
   // Add the actors to the renderer, set the background and size.
-  vtkstd::vector<vtkActor*>::iterator it = actors.begin();
-  vtkstd::vector<vtkActor*>::iterator itEnd = actors.end();
+  std::vector<vtkActor*>::iterator it = actors.begin();
+  std::vector<vtkActor*>::iterator itEnd = actors.end();
   while( it != itEnd )
     {
     ren1->AddActor(*it);
@@ -286,7 +285,7 @@ int main(int argc, char* argv[])
 #if 0
   ren1->GetActiveCamera()->SetParallelScale(1.5);
 #endif
-  
+
   // This starts the event loop and invokes an initial render.
   //
   iren->Initialize();

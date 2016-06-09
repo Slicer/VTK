@@ -36,8 +36,9 @@
 #ifndef Q_VTK_WIDGET_H
 #define Q_VTK_WIDGET_H
 
+#include "vtkGUISupportQtModule.h" // For export macro
 #include "QVTKInteractor.h"
-#include <QtGui/QWidget>
+#include <QWidget>
 
 class QVTKInteractorAdapter;
 
@@ -71,7 +72,7 @@ class vtkTDxDevice;
 #include "QVTKWin32Header.h"
 
 //! QVTKWidget displays a VTK window in a Qt window.
-class QVTK_EXPORT QVTKWidget : public QWidget
+class VTKGUISUPPORTQT_EXPORT QVTKWidget : public QWidget
 {
   Q_OBJECT
 
@@ -84,22 +85,22 @@ class QVTK_EXPORT QVTKWidget : public QWidget
 
 public:
   //! constructor
-  QVTKWidget(QWidget* parent = NULL, Qt::WFlags f = 0);
+  QVTKWidget(QWidget* parent = NULL, Qt::WindowFlags f = 0);
   //! destructor
   virtual ~QVTKWidget();
 
   // Description:
   // Set the vtk render window, if you wish to use your own vtkRenderWindow
   virtual void SetRenderWindow(vtkRenderWindow*);
-    
+
   // Description:
   // Get the vtk render window.
   virtual vtkRenderWindow* GetRenderWindow();
-    
+
   // Description:
   // Get the Qt/vtk interactor that was either created by default or set by the user
   virtual QVTKInteractor* GetInteractor();
-    
+
   // Description:
   // Enum for additional event types supported.
   // These events can be picked up by command observers on the interactor
@@ -133,13 +134,13 @@ public:
   // Returns the current image in the window.  If the image cache is up
   // to date, that is returned to avoid grabbing other windows.
   virtual vtkImageData* cachedImage();
-    
+
   // Description:
   // Handle showing of the Widget
   virtual void showEvent(QShowEvent*);
 
   virtual QPaintEngine* paintEngine() const;
-  
+
   // Description:
   // Use a 3DConnexion device. Initial value is false.
   // If VTK is not build with the TDx option, this is no-op.
@@ -149,7 +150,7 @@ public:
   // it is ignored.
   void SetUseTDx(bool useTDx);
   bool GetUseTDx() const;
-  
+
 
 Q_SIGNALS:
   // Description:
@@ -219,7 +220,7 @@ protected:
   virtual void focusOutEvent(QFocusEvent*);
   // overload Qt's event() to capture more keys
   bool event( QEvent* e );
-    
+
   // overload context menu event
   virtual void contextMenuEvent(QContextMenuEvent*);
   // overload drag enter event
@@ -242,10 +243,19 @@ protected:
 
   // the paint engine
   QPaintEngine* mPaintEngine;
-    
+
   // set up an X11 window based on a visual and colormap
   // that VTK chooses
   void x11_setup_window();
+
+#if defined(Q_OS_WIN)
+  bool winEvent(MSG* msg, long* result);
+
+#if QT_VERSION >= 0x050000
+  bool nativeEvent(const QByteArray& eventType, void* message, long* result);
+#endif
+
+#endif
 
 #if defined(QVTK_USE_CARBON)
   EventHandlerUPP DirtyRegionHandlerUPP;
@@ -254,19 +264,25 @@ protected:
 #endif
 
 protected:
-    
+
   vtkImageData* mCachedImage;
   bool cachedImageCleanFlag;
   bool automaticImageCache;
   double maxImageCacheRenderRate;
   QVTKInteractorAdapter* mIrenAdapter;
-  
+
 private:
   //! unimplemented operator=
   QVTKWidget const& operator=(QVTKWidget const&);
   //! unimplemented copy
   QVTKWidget(const QVTKWidget&);
 
+  unsigned long renderEventCallbackObserverId;
+
+  // Description:
+  // Callback called on every vtkCommand::RenderEvent fired by the
+  // vtkRenderWindow.
+  void renderEventCallback();
 };
 
 #endif

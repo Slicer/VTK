@@ -36,7 +36,6 @@ public:
   octree_cursor( octree_pointer otree );
   octree_cursor( octree_node_pointer oroot );
   octree_cursor( const const_path& src );
-  ~octree_cursor();
 
   void up();
   void down( int child_of_this_node );
@@ -47,12 +46,10 @@ public:
   void axis_partner( int axis );
   bool axis_bit( int axis ) const;
 
-  bool visit( const vtkstd::vector<int>& path );
+  bool visit( const std::vector<int>& path );
 
-  virtual self_path& operator = ( const path& it );
-#if ! ( defined(_MSC_VER) && (_MSC_VER < 1300) )
-  virtual self_path& operator = ( const const_path& it );
-#endif
+  self_path& operator = ( const path& it );
+  self_path& operator = ( const const_path& it );
 };
 
 #endif // __octree_cursor

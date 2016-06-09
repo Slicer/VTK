@@ -10,8 +10,8 @@
   All rights reserved.
   See Copyright.txt for details.
 
-     This software is distributed WITHOUT ANY WARRANTY; without even 
-     the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR 
+     This software is distributed WITHOUT ANY WARRANTY; without even
+     the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
      PURPOSE.  See the above copyright notice for more information.
 
 =========================================================================*/
@@ -23,7 +23,7 @@
 #pragma warning ( disable : 4503 )
 #pragma warning ( disable : 4710 )
 #pragma warning ( push, 3 )
-#endif 
+#endif
 
 #include "DICOMConfig.h"
 #include "DICOMParser.h"
@@ -34,7 +34,7 @@
 #include <math.h>
 #endif
 #include <time.h>
-#include <assert.h>
+#include <cassert>
 #if !defined(__MWERKS__)
 #include <sys/types.h>
 #endif
@@ -42,21 +42,15 @@
 #include <string.h>
 #include <string>
 
-// Define DEBUG_DICOM to get debug messages sent to dicom_stream::cerr
+// Define DEBUG_DICOM to get debug messages
 // #define DEBUG_DICOM
 
 #define DICOMPARSER_IGNORE_MAGIC_NUMBER
 
-#ifdef DEBUG_DICOM
-#define DICOM_DBG_MSG(x) {dicom_stream::cout x}
-#else 
-#define DICOM_DBG_MSG(x)
-#endif
-
 static const char* DICOM_MAGIC = "DICM";
 static const int   OPTIONAL_SKIP = 128;
 
-class DICOMParserImplementation 
+class DICOMParserImplementation
 {
 public:
   DICOMParserImplementation() : Groups(), Elements(), Datatypes(), Map(), TypeMap()
@@ -75,8 +69,8 @@ public:
 
   //
   // Stores a map from pair<group, element> keys to
-  // values of datatype.  We use this to store the 
-  // datatypes for implicit keys that we are 
+  // values of datatype.  We use this to store the
+  // datatypes for implicit keys that we are
   // interested in.
   //
   DICOMImplicitTypeMap TypeMap;
@@ -101,11 +95,8 @@ DICOMParser::GetFileName()
 
 bool DICOMParser::OpenFile(const dicom_stl::string& filename)
 {
-  if (this->DataFile)
-    {
-    // Deleting the DataFile closes the file
-    delete this->DataFile;
-    }
+  // Deleting the DataFile closes any previously opened file
+  delete this->DataFile;
   this->DataFile = new DICOMFile();
   bool val = this->DataFile->Open(filename);
 
@@ -114,22 +105,29 @@ bool DICOMParser::OpenFile(const dicom_stl::string& filename)
     this->FileName = filename;
     }
 
-  
+
 #ifdef DEBUG_DICOM
   if (this->ParserOutputFile.rdbuf()->is_open())
     {
     this->ParserOutputFile.flush();
     this->ParserOutputFile.close();
     }
-  
+
   dicom_stl::string fn(filename);
   dicom_stl::string append(".parser.txt");
   dicom_stl::string parseroutput(fn + append);
   // dicom_stl::string parseroutput(dicom_stl::string(dicom_stl::string(filename) + dicom_stl::string(".parser.txt")));
   this->ParserOutputFile.open(parseroutput.c_str()); //, dicom_stream::ios::app);
 #endif
- 
+
   return val;
+}
+
+void DICOMParser::CloseFile()
+{
+  // Deleting the DataFile closes any previously opened file
+  delete this->DataFile;
+  this->DataFile = 0;
 }
 
 DICOMParser::~DICOMParser() {
@@ -138,11 +136,7 @@ DICOMParser::~DICOMParser() {
   //
   this->ClearAllDICOMTagCallbacks();
 
-  if (this->DataFile)
-    {
-    delete this->DataFile;
-    }
-
+  delete this->DataFile;
   delete this->TransferSyntaxCB;
   delete this->Implementation;
 
@@ -205,7 +199,7 @@ bool DICOMParser::IsDICOMFile(DICOMFile* file) {
     {
     file->Skip(OPTIONAL_SKIP-4);
     file->Read(static_cast<void*>(magic_number),4);
-    if (CheckMagic(magic_number)) 
+    if (CheckMagic(magic_number))
       {
       return true;
       }
@@ -437,6 +431,26 @@ void DICOMParser::ReadNextRecord(doublebyte& group, doublebyte& element, DICOMPa
           case DICOMParser::VR_AT:
             // dicom_stream::cout << "ATTRIBUTE Byte swap needed!" << dicom_stream::endl;
             break;
+          case VR_UNKNOWN:
+          case VR_DA:
+          case VR_OB:
+          case VR_AE:
+          case VR_SH:
+          case VR_UI:
+          case VR_TM:
+          case VR_PN:
+          case VR_UN:
+          case VR_LO:
+          case VR_SQ:
+          case VR_AS:
+          case VR_CS:
+          case VR_DS:
+          case VR_IS:
+          case VR_DT:
+          case VR_LT:
+          case VR_ST:
+          case VR_UT:
+          case VR_AW:
           default:
             break;
           }
@@ -461,10 +475,10 @@ void DICOMParser::ReadNextRecord(doublebyte& group, doublebyte& element, DICOMPa
   else
     {
     //
-    // Some lengths are negative, but we don't 
+    // Some lengths are negative, but we don't
     // want to back up the file pointer.
     //
-    if (length > 0) 
+    if (length > 0)
       {
       DataFile->Skip(length);
       }
@@ -531,7 +545,7 @@ void DICOMParser::SetDICOMTagCallbacks(doublebyte group, doublebyte element, VRT
 }
 
 
-bool DICOMParser::CheckMagic(char* magic_number) 
+bool DICOMParser::CheckMagic(char* magic_number)
 {
   return (
           (magic_number[0] == DICOM_MAGIC[0]) &&
@@ -555,7 +569,7 @@ void DICOMParser::DumpTag(dicom_stream::ostream& out, doublebyte group, doubleby
 
   char ct2=static_cast<char>(t2);
   char ct1=static_cast<char>(t1);
-    
+
   out << "(0x";
 
   out.width(4);
@@ -566,7 +580,7 @@ void DICOMParser::DumpTag(dicom_stream::ostream& out, doublebyte group, doubleby
 
   out.width(4);
   out.fill('0');
-    
+
   out << dicom_stream::hex << element;
   out << ") ";
 
@@ -574,7 +588,7 @@ void DICOMParser::DumpTag(dicom_stream::ostream& out, doublebyte group, doubleby
   out << dicom_stream::dec;
   out << " " << ct1 << ct2 << " ";
   out << "[" << length << " bytes] ";
-  
+
   if (group == 0x7FE0 && element == 0x0010)
     {
     out << "Image data not printed." ;
@@ -583,7 +597,7 @@ void DICOMParser::DumpTag(dicom_stream::ostream& out, doublebyte group, doubleby
     {
     out << (tempdata ? reinterpret_cast<char*>(tempdata) : "NULL");
     }
- 
+
   out << dicom_stream::dec << dicom_stream::endl;
   out.fill(prev);
   out << dicom_stream::dec;
@@ -653,8 +667,8 @@ void DICOMParser::AddDICOMTagCallbackToAllTags(DICOMCallback* cb)
   }
 }
 
-bool DICOMParser::ParseExplicitRecord(doublebyte, doublebyte, 
-                                      quadbyte& length, 
+bool DICOMParser::ParseExplicitRecord(doublebyte, doublebyte,
+                                      quadbyte& length,
                                       VRTypes& represent)
 {
   doublebyte representation = DataFile->ReadDoubleByte();
@@ -663,7 +677,7 @@ bool DICOMParser::ParseExplicitRecord(doublebyte, doublebyte,
 
   if (valid)
     {
-    return true;        
+    return true;
     }
   else
     {
@@ -677,7 +691,7 @@ bool DICOMParser::ParseImplicitRecord(doublebyte group, doublebyte element,
                                       quadbyte& length,
                                       VRTypes& represent)
 {
-  DICOMImplicitTypeMap::iterator iter = 
+  DICOMImplicitTypeMap::iterator iter =
     Implementation->TypeMap.find(DICOMMapKey(group,element));
   represent = VRTypes((*iter).second);
   //
@@ -694,7 +708,7 @@ void DICOMParser::TransferSyntaxCallback(DICOMParser *,
                                          doublebyte,
                                          DICOMParser::VRTypes,
                                          unsigned char* val,
-                                         quadbyte) 
+                                         quadbyte)
 
 {
 #ifdef DEBUG_DICOM
@@ -718,7 +732,7 @@ void DICOMParser::TransferSyntaxCallback(DICOMParser *,
     this->ToggleByteSwapImageData = true;
     //
     // Data byte order is big endian
-    // 
+    //
     // We're always reading little endian in the beginning,
     // so now we need to swap.
     }
@@ -747,7 +761,7 @@ void DICOMParser::GetGroupsElementsDatatypes(dicom_stl::vector<doublebyte>& grou
   dicom_stl::vector<doublebyte>::iterator giter; // = this->Groups.begin();
   dicom_stl::vector<doublebyte>::iterator eiter; // = this->Elements.begin();
   dicom_stl::vector<DICOMParser::VRTypes>::iterator diter; // = this->Datatypes.begin();
-  
+
   for (giter = this->Implementation->Groups.begin(), eiter = this->Implementation->Elements.begin(), diter = this->Implementation->Datatypes.begin();
        (giter != this->Implementation->Groups.end()) && (eiter != this->Implementation->Elements.end()) && (diter != this->Implementation->Datatypes.end());
        giter++, eiter++, diter++)
@@ -761,7 +775,7 @@ void DICOMParser::GetGroupsElementsDatatypes(dicom_stl::vector<doublebyte>& grou
 void DICOMParser::ClearAllDICOMTagCallbacks()
 {
   DICOMParserMap::iterator mapIter;
-  
+
   for (mapIter = this->Implementation->Map.begin();
        mapIter != this->Implementation->Map.end();
        mapIter++)
@@ -769,7 +783,7 @@ void DICOMParser::ClearAllDICOMTagCallbacks()
        dicom_stl::pair<const DICOMMapKey, DICOMMapValue> mapPair = *mapIter;
        DICOMMapValue mapVal = mapPair.second;
        dicom_stl::vector<DICOMCallback*>* cbVector = mapVal.second;
-       
+
        delete cbVector;
        }
 

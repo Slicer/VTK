@@ -82,7 +82,7 @@ tprop.ShadowOn()
 # Create a vtkCubeAxesActor2D.  Use the outer edges of the bounding box to
 # draw the axes.  Add the actor to the renderer.
 axes = vtk.vtkCubeAxesActor2D()
-axes.SetInput(normals.GetOutput())
+axes.SetInputConnection(normals.GetOutputPort())
 axes.SetCamera(ren.GetActiveCamera())
 axes.SetLabelFormat("%6.4g")
 axes.SetFlyModeToOuterEdges()
@@ -107,10 +107,10 @@ ren2.AddViewProp(axes2)
 # Set up a check for aborting rendering.
 def CheckAbort(obj, event):
     # obj will be the object generating the event.  In this case it
-    # is renWin.    
+    # is renWin.
     if obj.GetEventPending() != 0:
         obj.SetAbortRender(1)
- 
+
 renWin.AddObserver("AbortCheckEvent", CheckAbort)
 
 iren.Initialize()

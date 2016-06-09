@@ -1,5 +1,5 @@
 package require vtk
-package require vtkinteraction 
+package require vtkinteraction
 
 # Demonstrate how to use vtkAngleWidget to measure angles and distances between
 # points.
@@ -10,9 +10,9 @@ package require vtkinteraction
 vtkTIFFReader reader
   reader SetFileName "$VTK_DATA_ROOT/Data/beach.tif"
 
-# "beach.tif" image contains ORIENTATION tag which is 
-# ORIENTATION_TOPLEFT (row 0 top, col 0 lhs) type. The TIFF 
-# reader parses this tag and sets the internal TIFF image 
+# "beach.tif" image contains ORIENTATION tag which is
+# ORIENTATION_TOPLEFT (row 0 top, col 0 lhs) type. The TIFF
+# reader parses this tag and sets the internal TIFF image
 # orientation accordingly.  To overwrite this orientation with a vtk
 # convention of ORIENTATION_BOTLEFT (row 0 bottom, col 0 lhs ), invoke
 # SetOrientationType method with parameter value of 4.
@@ -21,7 +21,7 @@ vtkTIFFReader reader
 # An actor to display the image.
 #
 vtkImageActor imageActor
-  imageActor SetInput [reader GetOutput]
+  [imageActor GetMapper] SetInputConnection [reader GetOutputPort]
 
 # Create a renderer and a render window,
 #
@@ -147,6 +147,9 @@ vtkAngleWidget widget
   iren AddObserver UserEvent {wm deiconify .vtkInteract}
   iren Initialize
 
+# prevent the tk window from showing up then start the event loop
+wm withdraw .
+
 # The widget starts out in an undefined state: the first mouse click defines
 # the end of one of the rays, the second mouse click defines the location of
 # the center, and the last mouse click defines the end of the other ray. Once
@@ -154,8 +157,5 @@ vtkAngleWidget widget
 # the center point.  Pressing 'i' will toggle the widget off/on and the
 # widget representation (i.e., point positions) will be preserved.
 #
-  widget On
 
-# prevent the tk window from showing up then start the event loop
-  wm withdraw .
-
+iren Start

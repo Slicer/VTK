@@ -1,34 +1,48 @@
-PROJECT(QtImageViewer)
+cmake_minimum_required(VERSION 2.8.8)
+if(POLICY CMP0020)
+  cmake_policy(SET CMP0020 NEW)
+endif()
+if(POLICY CMP0025)
+  cmake_policy(SET CMP0025 NEW) # CMake 3.0
+endif()
+if(POLICY CMP0043)
+  cmake_policy(SET CMP0043 NEW) # CMake 3.0
+endif()
+if(POLICY CMP0053)
+  cmake_policy(SET CMP0053 NEW) # CMake 3.1
+endif()
+project(QtImageViewer)
 
-IF(NOT VTK_BINARY_DIR)
-FIND_PACKAGE(VTK)
-IF(NOT VTK_DIR)
-  MESSAGE(FATAL_ERROR "Please set VTK_DIR.")
-ENDIF(NOT VTK_DIR)
-INCLUDE(${VTK_USE_FILE})
-ENDIF(NOT VTK_BINARY_DIR)
-
-SET(QT_QMAKE_EXECUTABLE ${VTK_QT_QMAKE_EXECUTABLE} CACHE FILEPATH "")
-SET(QT_MOC_EXECUTABLE ${VTK_QT_MOC_EXECUTABLE} CACHE FILEPATH "")
-SET(QT_UIC_EXECUTABLE ${VTK_QT_UIC_EXECUTABLE} CACHE FILEPATH "")
-FIND_PACKAGE(Qt4 REQUIRED)
-INCLUDE(${QT_USE_FILE})
-
-SET (SRCS
-  main.cxx
+find_package(VTK COMPONENTS
+  vtkGUISupportQt
+  vtkIOImage
+  vtkInteractionImage
+  vtkRendering${VTK_RENDERING_BACKEND}
+  vtkTestingCore
 )
+include(${VTK_USE_FILE})
 
-# Use the include path and library for Qt that is used by VTK.
-INCLUDE_DIRECTORIES( ${QT_INCLUDE_DIR} ${QT_QTGUI_INCLUDE_DIR}
-                     ${QT_QTCORE_INCLUDE_DIR})
+if("${VTK_QT_VERSION}" STREQUAL "")
+  message(FATAL_ERROR "VTK was not built with Qt")
+endif()
 
-ADD_EXECUTABLE( qtimageviewer MACOSX_BUNDLE ${SRCS})
+set( Srcs main.cxx )
 
-TARGET_LINK_LIBRARIES( qtimageviewer
-  QVTK
-  ${QT_LIBRARIES}
-  vtkRendering
-  vtkGraphics
-  vtkIO
-  vtkCommon
-)
+if(VTK_QT_VERSION VERSION_GREATER "4")
+  find_package(Qt5 COMPONENTS Core REQUIRED QUIET)
+
+  add_executable(qtimageviewer ${Srcs})
+  qt5_use_modules(qtimageviewer Core Gui Widgets)
+  target_link_libraries(qtimageviewer ${VTK_LIBRARIES})
+else()
+  find_package(Qt4 REQUIRED)
+  include(${QT_USE_FILE})
+  # Use what VTK built with
+  set(QT_QMAKE_EXECUTABLE ${VTK_QT_QMAKE_EXECUTABLE} CACHE FILEPATH "")
+  set(QT_MOC_EXECUTABLE ${VTK_QT_MOC_EXECUTABLE} CACHE FILEPATH "")
+  set(QT_UIC_EXECUTABLE ${VTK_QT_UIC_EXECUTABLE} CACHE FILEPATH "")
+  include_directories(${QT_INCLUDE_DIR})
+
+  add_executable(qtimageviewer ${Srcs})
+  target_link_libraries(qtimageviewer ${QT_LIBRARIES} ${VTK_LIBRARIES})
+endif()

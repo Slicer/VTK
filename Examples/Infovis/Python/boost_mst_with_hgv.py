@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 from vtk import *
 
 source = vtkRandomGraphSource()
@@ -6,7 +7,7 @@ source.SetNumberOfVertices(100)
 source.SetEdgeProbability(0.1)
 source.SetUseEdgeProbability(True)
 source.AllowParallelEdgesOn()
-source.AllowSelfLoopsOn() 
+source.AllowSelfLoopsOn()
 source.SetStartWithTree(True)
 
 # Connect to the centrality filter.

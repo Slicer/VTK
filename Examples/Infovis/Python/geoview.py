@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 from vtk import *
 import os.path
 
@@ -11,7 +12,7 @@ source.SetNumberOfVertices(100)
 source.SetEdgeProbability(0.00) # produces a tree
 source.SetUseEdgeProbability(True)
 source.AllowParallelEdgesOn()
-source.AllowSelfLoopsOn() 
+source.AllowSelfLoopsOn()
 source.SetStartWithTree(True)
 
 # Create a 3D geospatial view

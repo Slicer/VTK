@@ -2,7 +2,6 @@
 #include "GraphLayoutViewItem.h"
 #include "vtkGraphLayoutView.h"
 #include "vtkGenericOpenGLRenderWindow.h"
-#include "vtkgl.h"
 #include "QVTKInteractor.h"
 #include "vtkXMLTreeReader.h"
 #include "vtkRenderedTreeAreaRepresentation.h"
@@ -19,7 +18,6 @@ GraphLayoutViewItem::GraphLayoutViewItem(QGLContext* ctx, QGraphicsItem* p)
   : QVTKGraphicsItem(ctx, p)
 {
   GraphLayoutView.TakeReference(vtkGraphLayoutView::New());
-  GraphLayoutView->SetInteractor(this->GetInteractor());
   GraphLayoutView->SetRenderWindow(this->GetRenderWindow());
 
   QFile f1(":/Data/treetest.xml");
@@ -55,7 +53,7 @@ GraphLayoutViewItem::GraphLayoutViewItem(QGLContext* ctx, QGraphicsItem* p)
   t->GetEdgeData()->AddArray(label);
 
   vtkSmartPointer<vtkStringToNumeric> numeric = vtkSmartPointer<vtkStringToNumeric>::New();
-  numeric->SetInput(t);
+  numeric->SetInputConnection(reader->GetOutputPort());
 
   GraphLayoutView->DisplayHoverTextOn();
   GraphLayoutView->SetLayoutStrategyToCircular();

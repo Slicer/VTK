@@ -21,8 +21,8 @@ Creation:
 
  wxVTKRenderWindowInteractor(parent, ID, stereo=0, [wx keywords]):
 
- You should create a wx.PySimpleApp() or some other wx**App before
- creating the window.
+ You should create a wx.App(False) or some other wx.App subclass
+ before creating the window.
 
 Behaviour:
 
@@ -171,18 +171,21 @@ class wxVTKRenderWindowInteractor(baseClass):
                 attribList.append(wx.glcanvas.WX_GL_STEREO)
 
             try:
-                baseClass.__init__(self, parent, ID, position, size, style,
+                baseClass.__init__(self, parent, ID, pos=position, size=size,
+                                   style=style,
                                    attribList=attribList)
             except wx.PyAssertionError:
                 # visual couldn't be allocated, so we go back to default
-                baseClass.__init__(self, parent, ID, position, size, style)
+                baseClass.__init__(self, parent, ID, pos=position, size=size,
+                                   style=style)
                 if stereo:
                     # and make sure everyone knows that the stereo
                     # visual wasn't set.
                     stereo = 0
 
         else:
-            baseClass.__init__(self, parent, ID, position, size, style)
+            baseClass.__init__(self, parent, ID, pos=position, size=size,
+                               style=style)
 
         # create the RenderWindow and initialize it
         self._Iren = vtk.vtkGenericRenderWindowInteractor()
@@ -345,9 +348,8 @@ class wxVTKRenderWindowInteractor(baseClass):
                 if not d.startswith('0x'):
                     d = '0x' + d
 
-                # we now have 0xdeadbeef
-                # VTK wants it as: _deadbeef_void_p (pre-SWIG-1.3 style)
-                d = '_%s_%s\0' % (d[2:], 'void_p')
+                # VTK wants it as: _xxxxxxxx_p_void (SWIG pointer)
+                d = '_%s_%s\0' % (d[2:], 'p_void')
 
         return d
 
@@ -666,7 +668,7 @@ def wxVTKRenderWindowInteractorConeExample():
     """Like it says, just a simple example
     """
     # every wx app needs an app
-    app = wx.PySimpleApp()
+    app = wx.App(False)
 
     # create the top-level frame, sizer and wxVTKRWI
     frame = wx.Frame(None, -1, "wxVTKRenderWindowInteractor", size=(400,400))
@@ -695,7 +697,7 @@ def wxVTKRenderWindowInteractorConeExample():
     cone.SetResolution(8)
 
     coneMapper = vtk.vtkPolyDataMapper()
-    coneMapper.SetInput(cone.GetOutput())
+    coneMapper.SetInputConnection(cone.GetOutputPort())
 
     coneActor = vtk.vtkActor()
     coneActor.SetMapper(coneMapper)

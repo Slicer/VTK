@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 from vtk import *
 import os.path
 
@@ -57,6 +58,4 @@ view.GetRenderWindow().SetSize(600, 600)
 view.ResetCamera()
 view.Render()
 view.GetInteractor().Start()
-
-database.FastDelete()
 

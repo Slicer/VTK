@@ -1,7 +1,10 @@
+#!/usr/bin/env python
 from vtk import *
+from vtk.util.misc import vtkGetDataRoot
+VTK_DATA_ROOT = vtkGetDataRoot()
 
 reader = vtkXGMLReader()
-reader.SetFileName("fsm.gml")
+reader.SetFileName(VTK_DATA_ROOT + "/Data/Infovis/fsm.gml")
 reader.Update()
 
 strategy   = vtkSpanTreeLayoutStrategy()
@@ -28,7 +31,7 @@ view.ResetCamera()
 view.Render()
 
 #Here's the window with David's original layout methodology
-#  Aside from the theme elements in the view above, the notable 
+#  Aside from the theme elements in the view above, the notable
 #  difference between the two views is the angling on the edges.
 layout = vtkGraphLayout()
 layout.SetLayoutStrategy(strategy)
@@ -48,7 +51,7 @@ cube.SetZLength(0.3)
 
 glyph = vtkGlyph3D()
 glyph.SetInputConnection(vertex_geom.GetOutputPort())
-glyph.SetSource(cube.GetOutput())
+glyph.SetSourceConnection(0, cube.GetOutputPort())
 
 gmap = vtkPolyDataMapper()
 gmap.SetInputConnection(glyph.GetOutputPort())

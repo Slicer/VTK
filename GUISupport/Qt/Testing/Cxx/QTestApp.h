@@ -33,7 +33,13 @@ public:
 
   static int exec();
 
+#if QT_VERSION >= 0x050000
+  static void messageHandler(QtMsgType type,
+    const QMessageLogContext & context,
+    const QString & message);
+#else
   static void messageHandler(QtMsgType type, const char *msg);
+#endif
 
   static void delay(int ms);
 
@@ -45,16 +51,16 @@ public:
 
   static void keyClick(QWidget* w, Qt::Key key, Qt::KeyboardModifiers mod, int ms);
 
-  static void mouseDown(QWidget* w, QPoint pos, Qt::MouseButton btn, 
-                        Qt::KeyboardModifiers mod, int ms);
-  
-  static void mouseUp(QWidget* w, QPoint pos, Qt::MouseButton btn, 
-                      Qt::KeyboardModifiers mod, int ms);
-  
-  static void mouseMove(QWidget* w, QPoint pos, Qt::MouseButton btn, 
+  static void mouseDown(QWidget* w, QPoint pos, Qt::MouseButton btn,
                         Qt::KeyboardModifiers mod, int ms);
 
-  static void mouseClick(QWidget* w, QPoint pos, Qt::MouseButton btn, 
+  static void mouseUp(QWidget* w, QPoint pos, Qt::MouseButton btn,
+                      Qt::KeyboardModifiers mod, int ms);
+
+  static void mouseMove(QWidget* w, QPoint pos, Qt::MouseButton btn,
+                        Qt::KeyboardModifiers mod, int ms);
+
+  static void mouseClick(QWidget* w, QPoint pos, Qt::MouseButton btn,
                          Qt::KeyboardModifiers mod, int ms);
 
 private:

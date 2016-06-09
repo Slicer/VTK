@@ -30,7 +30,7 @@ vtkThreshold thresh
     thresh SetInputArrayToProcess 1 0 0 0 "thickness9"
 #    thresh SetAttributeModeToUseCellData
 
-# This is used to extract the mold from the parison. 
+# This is used to extract the mold from the parison.
 vtkConnectivityFilter connect
     connect SetInputConnection [thresh GetOutputPort]
     connect SetExtractionModeToSpecifiedRegions
@@ -96,3 +96,4 @@ iren AddObserver UserEvent {wm deiconify .vtkInteract}
 
 # prevent the tk window from showing up then start the event loop
 wm withdraw .
+iren Start

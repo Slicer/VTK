@@ -1,4 +1,4 @@
-#import <AppKit/AppKit.h>
+#import <Cocoa/Cocoa.h>
 
 #import "vtkCocoaGLView.h"
 
@@ -8,7 +8,8 @@
 
 @interface BasicVTKView : vtkCocoaGLView
 {
-    vtkRenderer*                    renderer;
+@private
+  vtkRenderer* renderer;
 }
 
 - (void)initializeVTKSupport;

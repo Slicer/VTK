@@ -6,7 +6,7 @@ package require vtkinteraction
 #
 
 # Create the renderer, the render window, and the interactor. The renderer
-# draws into the render window, the interactor enables mouse- and 
+# draws into the render window, the interactor enables mouse- and
 # keyboard-based interaction with the scene.
 vtkRenderer ren
 vtkRenderWindow renWin
@@ -29,16 +29,16 @@ vtkVolume16Reader v16
 
 # The volume will be displayed by ray-cast alpha compositing.
 # A ray-cast mapper is needed to do the ray-casting, and a
-# compositing function is needed to do the compositing along the ray. 
+# compositing function is needed to do the compositing along the ray.
 vtkVolumeRayCastCompositeFunction rayCastFunction
 
 vtkVolumeRayCastMapper volumeMapper
-  volumeMapper SetInput [v16 GetOutput]
+  volumeMapper SetInputConnection [v16 GetOutputPort]
   volumeMapper SetVolumeRayCastFunction rayCastFunction
 
 # The color transfer function maps voxel intensities to colors.
 # It is modality-specific, and often anatomy-specific as well.
-# The goal is to one color for flesh (between 500 and 1000) 
+# The goal is to one color for flesh (between 500 and 1000)
 # and another color for bone (1150 and over).
 vtkColorTransferFunction volumeColor
   volumeColor AddRGBPoint 0    0.0 0.0 0.0
@@ -74,7 +74,7 @@ vtkPiecewiseFunction volumeGradientOpacity
 # estimation will be very poor.  The impact of the shading can be
 # decreased by increasing the Ambient coefficient while decreasing
 # the Diffuse and Specular coefficient.  To increase the impact
-# of shading, decrease the Ambient and increase the Diffuse and Specular.  
+# of shading, decrease the Ambient and increase the Diffuse and Specular.
 vtkVolumeProperty volumeProperty
   volumeProperty SetColor volumeColor
   volumeProperty SetScalarOpacity volumeScalarOpacity
@@ -112,6 +112,6 @@ iren AddObserver UserEvent {wm deiconify .vtkInteract}
 iren Initialize
 
 wm withdraw .
-
+iren Start
 
 

@@ -25,10 +25,21 @@
 #ifndef QVTK_WIDGET_PLUGIN
 #define QVTK_WIDGET_PLUGIN
 
+// Disable warnings that Qt headers give.
+#if defined(__GNUC__) && (__GNUC__>4) || (__GNUC__==4 && __GNUC_MINOR__>=6)
+#pragma GCC diagnostic push
+#endif
+#if defined(__GNUC__) && (__GNUC__>4) || (__GNUC__==4 && __GNUC_MINOR__>=2)
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+#endif
+
 #include <QDesignerCustomWidgetInterface>
 #include <QDesignerCustomWidgetCollectionInterface>
-#include <QtPlugin>
 #include <QObject>
+#if QT_VERSION >= 0x050000
+# include <QtDesigner>
+#endif
+#include <QtPlugin>
 #include <QWidget>
 
 
@@ -38,7 +49,7 @@ class QVTKWidgetPlugin : public QDesignerCustomWidgetInterface
   public:
     QVTKWidgetPlugin();
     ~QVTKWidgetPlugin();
-    
+
     QString name() const;
     QString domXml() const;
     QWidget* createWidget(QWidget* parent = 0);
@@ -54,10 +65,13 @@ class QVTKWidgetPlugin : public QDesignerCustomWidgetInterface
 class QVTKPlugin : public QObject, public QDesignerCustomWidgetCollectionInterface
 {
   Q_OBJECT
+  #if QT_VERSION >= 0x050000
+  Q_PLUGIN_METADATA(IID "org.vtk.qvtkplugin")
+  #endif
   Q_INTERFACES(QDesignerCustomWidgetCollectionInterface)
   public:
   QVTKPlugin();
-  ~QVTKPlugin();
+  virtual ~QVTKPlugin();
 
   virtual QList<QDesignerCustomWidgetInterface*> customWidgets() const;
   private:
@@ -72,5 +86,9 @@ public:
   QVTKWidget(QWidget* p) : QWidget(p) {}
 };
 
+// Undo disabling of warning.
+#if defined(__GNUC__) && (__GNUC__>4) || (__GNUC__==4 && __GNUC_MINOR__>=6)
+#pragma GCC diagnostic pop
+#endif
 
 #endif //QVTK_WIDGET_PLUGIN

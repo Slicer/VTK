@@ -3,7 +3,7 @@
 # This file depends on the value of OPENGL_INCLUDE_DIR (/usr/include on Linux,
 # /usr/X11R6/include on Mac, ) defined by module FindOpenGL.cmake
 # (FIND_PACKAGE(OpenGL))
-# 
+#
 #
 # 1. GLX_DEFINES_MACRO_GLX_VERSION_1_1: is macro GLX_VERSION_1_1 defined?
 # 2. GLX_DEFINES_MACRO_GLX_VERSION_1_2: is macro GLX_VERSION_1_2 defined?
@@ -212,9 +212,9 @@ unset(GLX_GLXEXT_LEGACY_OCCURENCE)
 file(STRINGS ${glx_h_full_path} GLX_GLXEXT_LEGACY_OCCURENCE REGEX GLX_GLXEXT_LEGACY)
 if(GLX_GLXEXT_LEGACY_OCCURENCE)
  set(GLX_USES_MACRO_GLX_GLXEXT_LEGACY TRUE CACHE INTERNAL "")
-else(GLX_GLXEXT_LEGACY_OCCURENCE)
+else()
  set(GLX_USES_MACRO_GLX_GLXEXT_LEGACY FALSE CACHE INTERNAL "")
-endif(GLX_GLXEXT_LEGACY_OCCURENCE)
+endif()
 
 
 # -----------------------------------------------------------------------------

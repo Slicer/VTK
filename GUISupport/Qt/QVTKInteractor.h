@@ -36,16 +36,17 @@
 #ifndef Q_VTK_INTERACTOR_H
 #define Q_VTK_INTERACTOR_H
 
+#include "vtkGUISupportQtModule.h" // For export macro
 #include "QVTKWin32Header.h"
 #include <vtkRenderWindowInteractor.h>
 #include <vtkCommand.h>
 #include <QtCore/QObject>
 
 #include "vtkTDxConfigure.h" // defines VTK_USE_TDX
-#if defined(VTK_USE_TDX) && defined(Q_WS_WIN)
+#if defined(VTK_USE_TDX) && defined(Q_OS_WIN)
 class vtkTDxWinDevice;
 #endif
-#if defined(VTK_USE_TDX) && defined(Q_WS_MAC)
+#if defined(VTK_USE_TDX) && defined(Q_OS_MAC)
 class vtkTDxMacDevice;
 #endif
 #if defined(VTK_USE_TDX) && defined(Q_WS_X11)
@@ -60,7 +61,7 @@ class QVTKInteractorInternal;
 // .SECTION Description
 // QVTKInteractor is an interactor for a QVTKWiget.
 
-class QVTK_EXPORT QVTKInteractor : public vtkRenderWindowInteractor
+class VTKGUISUPPORTQT_EXPORT QVTKInteractor : public vtkRenderWindowInteractor
 {
 public:
   static QVTKInteractor* New();
@@ -116,10 +117,10 @@ protected:
   virtual int InternalCreateTimer(int timerId, int timerType, unsigned long duration);
   // destroy a Qt Timer
   virtual int InternalDestroyTimer(int platformTimerId);
-#if defined(VTK_USE_TDX) && defined(Q_WS_WIN)
+#if defined(VTK_USE_TDX) && defined(Q_OS_WIN)
   vtkTDxWinDevice *Device;
 #endif
-#if defined(VTK_USE_TDX) && defined(Q_WS_MAC)
+#if defined(VTK_USE_TDX) && defined(Q_OS_MAC)
   vtkTDxMacDevice *Device;
 #endif
 #if defined(VTK_USE_TDX) && defined(Q_WS_X11)

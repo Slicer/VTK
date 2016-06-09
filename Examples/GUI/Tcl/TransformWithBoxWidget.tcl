@@ -10,13 +10,13 @@ vtkSphereSource sphere
 vtkConeSource cone
 vtkGlyph3D glyph
     glyph SetInputConnection [sphere GetOutputPort]
-    glyph SetSource [cone GetOutput]
+    glyph SetSourceConnection [cone GetOutputPort]
     glyph SetVectorModeToUseNormal
     glyph SetScaleModeToScaleByVector
     glyph SetScaleFactor 0.25
 vtkAppendPolyData appendData
-    appendData AddInput [glyph GetOutput]
-    appendData AddInput [sphere GetOutput]
+    appendData AddInputConnection [glyph GetOutputPort]
+    appendData AddInputConnection [sphere GetOutputPort]
 vtkPolyDataMapper maceMapper
     maceMapper SetInputConnection [appendData GetOutputPort]
 vtkLODActor maceActor
@@ -45,7 +45,7 @@ renWin SetSize 300 300
 
 # Place the interactor initially. The actor is used to place and scale
 # the interactor. An observer is added to the box widget to watch for
-# interaction events. This event is captured and used to set the 
+# interaction events. This event is captured and used to set the
 # transformation matrix of the actor.
 boxWidget SetProp3D maceActor
 boxWidget PlaceWidget
@@ -59,10 +59,12 @@ iren Initialize
 # prevent the tk window from showing up then start the event loop
 wm withdraw .
 
-# As the box widget is interacted with, it produces a transformation 
+# As the box widget is interacted with, it produces a transformation
 # matrix that is set on the actor.
 vtkTransform t
 proc TransformActor {} {
    boxWidget GetTransform t
    maceActor SetUserTransform t
 }
+
+iren Start

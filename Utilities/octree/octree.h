@@ -34,7 +34,7 @@
   * The octree_iterator class simply traverses the tree in depth-first order
   * and can be configured to visit only leaf nodes or to include all nodes.
   */
-template< typename T_, int d_ = 3, typename A_ = vtkstd::allocator<T_> >
+template< typename T_, int d_ = 3, typename A_ = std::allocator<T_> >
 class octree
 {
 public:
@@ -53,7 +53,7 @@ public:
   typedef const octree_node<T_,d_,A_>* const_octree_node_pointer;
   typedef const octree_node<T_,d_,A_>& const_octree_node_reference;
 
-  typedef typename vtkstd::vector<octree_node_pointer>::size_type size_type;
+  typedef typename std::vector<octree_node_pointer>::size_type size_type;
 
   typedef A_ allocator_type;
 
@@ -91,7 +91,7 @@ public:
   const_iterator begin( bool only_leaves = true ) const { return const_iterator( _M_root, _M_root, only_leaves ); }
   const_iterator end( bool only_leaves = true ) const { return const_iterator( _M_root, 0, only_leaves ); }
   //@}
-  
+
   octree_node_pointer root() { return this->_M_root; }
 
   size_t size( bool only_leaves = false );

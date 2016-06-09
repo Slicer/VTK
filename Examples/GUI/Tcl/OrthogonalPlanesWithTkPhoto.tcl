@@ -6,12 +6,12 @@ package require vtkinteraction
 # Image pipeline
 
 vtkVolume16Reader reader
-  reader SetDataDimensions 64 64  
-  reader SetDataByteOrderToLittleEndian  
-  reader SetFilePrefix "$VTK_DATA_ROOT/Data/headsq/quarter"   
-  reader SetImageRange 1 93  
-  reader SetDataSpacing 3.2 3.2 1.5  
-  reader Update 
+  reader SetDataDimensions 64 64
+  reader SetDataByteOrderToLittleEndian
+  reader SetFilePrefix "$VTK_DATA_ROOT/Data/headsq/quarter"
+  reader SetImageRange 1 93
+  reader SetDataSpacing 3.2 3.2 1.5
+  reader Update
 
 vtkImageCast cast
 cast SetInputConnection [reader GetOutputPort]
@@ -92,9 +92,9 @@ proc SetImages {} {
   global Position tphoto sphoto cphoto
   set Window [.c.w get]
   set Level [.c.l get]
-  vtkImageDataToTkPhoto [resample GetOutput] $tphoto $Position(z) transverse $Window $Level
-  vtkImageDataToTkPhoto [resample GetOutput] $sphoto $Position(x) sagittal $Window $Level
-  vtkImageDataToTkPhoto [resample GetOutput] $cphoto $Position(y) coronal $Window $Level
+  vtkImageDataToTkPhoto [resample GetOutputPort] $tphoto $Position(z) transverse $Window $Level
+  vtkImageDataToTkPhoto [resample GetOutputPort] $sphoto $Position(x) sagittal $Window $Level
+  vtkImageDataToTkPhoto [resample GetOutputPort] $cphoto $Position(y) coronal $Window $Level
 }
 
 proc CastToUnsignedChar {} {

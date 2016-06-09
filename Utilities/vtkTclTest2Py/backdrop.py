@@ -25,7 +25,7 @@ def BuildBackdrop (minX, maxX, minY, maxY, minZ, maxZ, thickness):
     global left
     global leftPlane
     global leftMapper
-    
+
     if not basePlane:
         basePlane = vtk.vtkCubeSource()
     basePlane.SetCenter( (maxX + minX)/2.0, minY, (maxZ + minZ)/2.0)
@@ -35,7 +35,7 @@ def BuildBackdrop (minX, maxX, minY, maxY, minZ, maxZ, thickness):
 
     if not baseMapper:
         baseMapper = vtk.vtkPolyDataMapper()
-    baseMapper.SetInput(basePlane.GetOutput())
+    baseMapper.SetInputConnection(basePlane.GetOutputPort())
 
     if not base:
         base = vtk.vtkActor()
@@ -50,7 +50,7 @@ def BuildBackdrop (minX, maxX, minY, maxY, minZ, maxZ, thickness):
 
     if not backMapper:
         backMapper = vtk.vtkPolyDataMapper()
-    backMapper.SetInput(backPlane.GetOutput())
+    backMapper.SetInputConnection(backPlane.GetOutputPort())
 
     if not back:
         back = vtk.vtkActor()
@@ -65,11 +65,11 @@ def BuildBackdrop (minX, maxX, minY, maxY, minZ, maxZ, thickness):
 
     if not leftMapper:
         leftMapper = vtk.vtkPolyDataMapper()
-    leftMapper.SetInput(leftPlane.GetOutput())
+    leftMapper.SetInputConnection(leftPlane.GetOutputPort())
 
     if not left:
         left = vtk.vtkActor()
     left.SetMapper(leftMapper)
 
-    return [base, back, left] 
+    return [base, back, left]
 

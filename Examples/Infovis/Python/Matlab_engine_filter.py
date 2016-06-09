@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 
 # Python example script that uses the Matlab Engine filter to compute the
 # degree centraility for an input graph and display the result.
@@ -7,7 +8,7 @@
 from vtk import *
 
 if __name__ == "__main__":
-    
+
   # Generate a random graph with 20 vertices and a random number of edges
   source = vtkRandomGraphSource()
   source.SetNumberOfVertices(20)

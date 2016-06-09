@@ -7,7 +7,7 @@ import vtk
 from vtk.util.misc import vtkGetDataRoot
 VTK_DATA_ROOT = vtkGetDataRoot()
 
-# Read a data file. This originally was a Cyberware laser digitizer scan 
+# Read a data file. This originally was a Cyberware laser digitizer scan
 # of Fran J.'s face. Surface normals are generated based on local geometry
 # (i.e., the polygon normals surrounding eash point are averaged). We flip
 # the normals because we want them to point out from Fran's face.
@@ -47,7 +47,7 @@ transformF.SetTransform(transform)
 # we previosuly generated.
 glyph = vtk.vtkGlyph3D()
 glyph.SetInputConnection(ptMask.GetOutputPort())
-glyph.SetSource(transformF.GetOutput())
+glyph.SetSourceConnection(transformF.GetOutputPort())
 glyph.SetVectorModeToUseNormal()
 glyph.SetScaleModeToScaleByVector()
 glyph.SetScaleFactor(0.004)

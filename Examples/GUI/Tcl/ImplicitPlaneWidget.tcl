@@ -16,7 +16,7 @@ vtkGlyph3D glyph
     glyph SetScaleModeToScaleByVector
     glyph SetScaleFactor 0.25
 
-# The sphere and spikes are appended into a single polydata. 
+# The sphere and spikes are appended into a single polydata.
 # This just makes things simpler to manage.
 vtkAppendPolyData apd
     apd AddInputConnection [glyph GetOutputPort]
@@ -29,7 +29,7 @@ vtkLODActor maceActor
     maceActor SetMapper maceMapper
     maceActor VisibilityOn
 
-# This portion of the code clips the mace with the vtkPlanes 
+# This portion of the code clips the mace with the vtkPlanes
 # implicit function. The clipped region is colored green.
 vtkPlane plane
 vtkClipPolyData clipper
@@ -58,7 +58,7 @@ vtkRenderWindowInteractor iren
 vtkImplicitPlaneWidget planeWidget
   planeWidget SetInteractor iren
   planeWidget SetPlaceFactor 1.25
-  planeWidget SetInput [glyph GetOutput]
+  planeWidget SetInputConnection [glyph GetOutputPort]
   planeWidget PlaceWidget
   planeWidget AddObserver InteractionEvent myCallback
 
@@ -83,3 +83,5 @@ proc myCallback {} {
     planeWidget GetPlane plane
     selectActor VisibilityOn
 }
+
+iren Start

@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 """
 This file demonstrates the creation of a directed graph using the
 Python interface to VTK.
@@ -26,7 +27,7 @@ if __name__ == "__main__":
         vertID1.InsertNextValue(i)
     for i in range(10):
         G1.AddGraphEdge(i, (i+1)%10)
-        
+
     #----------------------------------------------------------
     # Create a second graph
     # - This one is a triangle, with one node's pedigree id field
@@ -52,7 +53,7 @@ if __name__ == "__main__":
     # First Programmable Filter -- Add integer field to vertices
     # with a 1 for every vertex into G1
     G1_labeled = vtkProgrammableFilter()
-    G1_labeled.AddInputConnection( G1.GetProducerPort() )
+    G1_labeled.AddInputData( G1 )
 
     def vertex_labeler_g1():
         input = G1_labeled.GetInput()
@@ -60,13 +61,13 @@ if __name__ == "__main__":
         output.ShallowCopy(input)
         varray = vtkIntArray()
         varray.SetName("color")
-        
+
         varray.SetNumberOfTuples( output.GetNumberOfVertices() )
         for i in range( output.GetNumberOfVertices() ):
             varray.SetValue(i, 1)
-            
+
         output.GetVertexData().AddArray(varray)
-        
+
     G1_labeled.SetExecuteMethod( vertex_labeler_g1 )
 
 
@@ -75,7 +76,7 @@ if __name__ == "__main__":
     # Second Programmable Filter -- Add integer field to vertices
     # with a 2 for every vertex into G2
     G2_labeled = vtkProgrammableFilter()
-    G2_labeled.AddInputConnection( G2.GetProducerPort() )
+    G2_labeled.AddInputData( G2 )
 
     def vertex_labeler_g2():
         input = G2_labeled.GetInput()
@@ -83,13 +84,13 @@ if __name__ == "__main__":
         output.ShallowCopy(input)
         varray = vtkIntArray()
         varray.SetName("color")
-        
+
         varray.SetNumberOfTuples( output.GetNumberOfVertices() )
         for i in range( output.GetNumberOfVertices() ):
             varray.SetValue(i, 2)
-            
+
         output.GetVertexData().AddArray(varray)
-        
+
     G2_labeled.SetExecuteMethod( vertex_labeler_g2 )
 
 
@@ -110,13 +111,13 @@ if __name__ == "__main__":
     theme.SetPointSize(15)
     theme.SetCellOpacity(1)
     theme.FastDelete()
-    
+
     # Rendered graph representation to make vertices circles
     rep = vtkRenderedGraphRepresentation(  )
     rep.SetInputConnection(0, merge.GetOutputPort())
-    
+
     # vtkGraphToGlyph::CIRCLE == 7
-    rep.SetGlyphType(7)    
+    rep.SetGlyphType(7)
 
     # View containing the merged graph
     view = vtkGraphLayoutView()
@@ -129,11 +130,11 @@ if __name__ == "__main__":
     view.SetVertexLabelFontSize(20)
     view.ApplyViewTheme(theme)
 
-    
-    
+
+
     view.GetRenderWindow().SetSize(xdim, ydim)
     view.ResetCamera()
     view.Render()
-    
-    
+
+
     view.GetInteractor().Start()

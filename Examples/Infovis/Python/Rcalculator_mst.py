@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 
 # Python examples script that uses the R calculator filter to find the
 # maxiumum spanning tree of a random input graph by inverting the edge
@@ -9,7 +10,7 @@
 from vtk import *
 
 if __name__ == "__main__":
-    
+
   # Generate a random graph with 20 vertices and a random number of edges
   source = vtkRandomGraphSource()
   source.SetNumberOfVertices(20)

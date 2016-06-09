@@ -4,7 +4,7 @@
 # Create a histogram object
 
 proc vtkHistogramWidget {widget {width 512} {height 192}} {
-    
+
     set clip [::vtk::new_widget_object $widget vtkImageClip Clip]
 
     set accumulate \
@@ -24,7 +24,7 @@ proc vtkHistogramWidget {widget {width 512} {height 192}} {
     vtkTkImageViewerWidget $widget \
             -width $width \
             -height $height \
-            -iv $viewer 
+            -iv $viewer
 
     return $widget
 }
@@ -33,7 +33,7 @@ proc vtkHistogramWidget {widget {width 512} {height 192}} {
 
 proc HistogramWidgetSetInput {widget input} {
     set clip [::vtk::get_widget_variable_value $widget Clip]
-    $clip SetInput $input
+    $clip SetInputConnection $input
 }
 
 # Set the extent
@@ -48,17 +48,17 @@ proc HistogramWidgetSetExtent {widget x1 x2 y1 y2 z1 z2} {
 proc HistogramWidgetRender {widget} {
 
     # Get the size of the histogram window
-    
+
     set width [lindex [$widget configure -width] 4]
     set height [lindex [$widget configure -height] 4]
-    
+
     # Setup the bins of the accumulate filter from the range of input data
-    
+
     set accumulate [::vtk::get_widget_variable_value $widget Accumulate]
     set numBins [expr $width / 2]
 
     set data [$accumulate GetInput]
-    $data Update
+    $accumulate Update
 
     set inputRange [[[$data GetPointData] GetScalars] GetRange]
     set origin [lindex $inputRange 0]
@@ -67,7 +67,7 @@ proc HistogramWidgetRender {widget} {
     $accumulate SetComponentExtent 0 [expr $numBins - 1] 0 0 0 0
     $accumulate SetComponentOrigin $origin 0.0 0.0
     $accumulate SetComponentSpacing $spacing 1.0 1.0
-    
+
     # Initialize the canvas
 
     set canvas [::vtk::get_widget_variable_value $widget Canvas]
@@ -81,7 +81,7 @@ proc HistogramWidgetRender {widget} {
     # Get the histogram data
 
     set data [$accumulate GetOutput]
-    $data Update
+    $accumulate Update
 
     # Scale the histogram max to fit the window
 
@@ -139,7 +139,6 @@ proc HistogramWidgetBind {widget} {
 # Probe the histogram
 
 proc HistogramWidgetUpdateInteraction {widget} {
-
     set pos [[[[$widget GetImageViewer] GetRenderWindow] GetInteractor] GetEventPosition]
     set x [lindex $pos 0]
     set y [lindex $pos 1]
@@ -155,8 +154,9 @@ proc HistogramWidgetUpdateInteraction {widget} {
 
     # Now get the height of the histogram
 
+    $accumulate Update
     set data [$accumulate GetOutput]
-    $data Update
+    #$data Update
 
     # Make sure value is in extent
 
@@ -165,11 +165,10 @@ proc HistogramWidgetUpdateInteraction {widget} {
         return
     }
     set y [$data GetScalarComponentAsDouble $x 0 0 0]
-
     # Display the value
-    
+
     set mapper [::vtk::get_widget_variable_value $widget text1_mapper]
-    $mapper SetInput [format "\[%.1f, %.1f): %d" $binMin $binMax $y]
+    $mapper SetInput [format "\[%.1f, %.1f): %g" $binMin $binMax $y]
 
     $widget Render
 }

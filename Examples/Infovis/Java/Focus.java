@@ -29,7 +29,7 @@ public class Focus extends JFrame {
   private vtkRenderWindowPanel focusPanel = new vtkRenderWindowPanel();
   private vtkRenderedGraphRepresentation mainRep = new vtkRenderedGraphRepresentation();
   private vtkRenderedGraphRepresentation focusRep = new vtkRenderedGraphRepresentation();
-  
+
   private vtkDelimitedTextReader reader = new vtkDelimitedTextReader();
   private vtkTableToGraph tableToGraph = new vtkTableToGraph();
   private vtkBoostBreadthFirstSearch mainBFS = new vtkBoostBreadthFirstSearch();
@@ -49,9 +49,7 @@ public class Focus extends JFrame {
     // when the selection in one view changes.
     ViewChangedObserver obs = new ViewChangedObserver();
     this.link.AddObserver("SelectionChangedEvent", obs, "SelectionChanged");
-    
-    //this.reader.SetFileName("../../../../VTKData/Data/Infovis/classes.csv");
-    this.reader.SetFileName("C:/Users/Jeff/Work/VTKData/Data/Infovis/classes.csv");
+    this.reader.SetFileName("../../../../VTKData/Data/Infovis/classes.csv");
     this.tableToGraph.SetInputConnection(this.reader.GetOutputPort());
     this.tableToGraph.AddLinkEdge("Field 0", "Field 1");
     vtkSimple2DLayoutStrategy strategy = new vtkSimple2DLayoutStrategy();
@@ -69,7 +67,7 @@ public class Focus extends JFrame {
     this.thresh.InsertNextValue(1);
     node.SetSelectionList(this.thresh);
     select.AddNode(node);
-    this.extract.SetInput(1, select);
+    this.extract.SetInputData(1, select);
 
     this.mainRep.SetInputConnection(this.bfs.GetOutputPort());
     this.focusRep.SetInputConnection(this.extract.GetOutputPort());
@@ -138,7 +136,6 @@ public class Focus extends JFrame {
     menuItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_O,
         ActionEvent.CTRL_MASK));
     menuItem.addActionListener(new ActionListener() {
-      @Override
       public void actionPerformed(ActionEvent e) {
         // Create a file chooser
         final JFileChooser fc = new JFileChooser();
@@ -158,7 +155,6 @@ public class Focus extends JFrame {
     // A JButton
     JButton increase = new JButton("Increase Focus");
     increase.addActionListener(new ActionListener() {
-      @Override
       public void actionPerformed(ActionEvent e) {
         thresh.SetValue(1, thresh.GetValue(1) + 1);
 	extract.Modified();
@@ -169,7 +165,6 @@ public class Focus extends JFrame {
     // A JButton
     JButton decrease = new JButton("Decrease Focus");
     decrease.addActionListener(new ActionListener() {
-      @Override
       public void actionPerformed(ActionEvent e) {
         if (thresh.GetValue(1) > 0) {
           thresh.SetValue(1, thresh.GetValue(1) - 1);
@@ -215,17 +210,16 @@ public class Focus extends JFrame {
     }
   }
 
-  // In the static constructor we load in the native code.
-  // The libraries must be in your path to work.
+  // Load VTK library and print which library was not properly loaded
   static {
-    System.loadLibrary("vtkCommonJava");
-    System.loadLibrary("vtkFilteringJava");
-    System.loadLibrary("vtkIOJava");
-    System.loadLibrary("vtkImagingJava");
-    System.loadLibrary("vtkGraphicsJava");
-    System.loadLibrary("vtkRenderingJava");
-    System.loadLibrary("vtkInfovisJava");
-    System.loadLibrary("vtkViewsJava");
+    if (!vtkNativeLibrary.LoadAllNativeLibraries()) {
+      for (vtkNativeLibrary lib : vtkNativeLibrary.values()) {
+         if (!lib.IsLoaded()) {
+            System.out.println(lib.GetLibraryName() + " not loaded");
+         }
+      }
+    }
+        vtkNativeLibrary.DisableOutputWindow(null);
   }
 
   public static void main(String args[]) {
@@ -238,14 +232,6 @@ public class Focus extends JFrame {
         app.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         app.pack();
         app.setVisible(true);
-        app.addWindowListener(new WindowAdapter() {
-          @Override
-          public void windowClosing(WindowEvent e) {
-            // Calling vtkGlobalJavaHash.DeleteAll() will clean up
-            // VTK references before the Java program exits.
-            vtkGlobalJavaHash.DeleteAll();
-          }
-        });
         app.update();
       }});
   }

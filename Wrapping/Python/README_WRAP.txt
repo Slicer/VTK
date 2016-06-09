@@ -1,7 +1,7 @@
 Notes on the Python Wrappers for VTK
 
 First version by David Gobbi: Dec 19, 2002
-Last update was on May 30, 2011.
+Last update was on Dec 2, 2014
 
 Abstract:
 =========
@@ -93,6 +93,29 @@ module but sometimes as class attributes:
 >>> vtk.vtkCommand.ErrorEvent
 39
 
+Each named enum type is wrapped as a new Python type, and members
+of the enum are instances of that type.  This allows type checking
+for enum types:
+
+>>> # works if given a constant of the correct enum type
+>>> o.SetIntegrationMode(o.Continuous)
+>>> # does not work, because "int" is not of the correct type
+>>> o.SetIntegrationMode(10)
+TypeError: SetIntegrationMode arg 1: expected enum EnumType, got int
+
+Note that members of anonymous enums do not have a special type, and
+are simply wrapped as python ints.
+
+
+Namespaces
+----------
+
+Namespaces are currently wrapped in a very limited manner: the only
+namespace members that are wrapped are constants and enum types.
+There is no wrapping of namespaced classes or functions, or of nested
+namespaces.  This is likely to be expanded upon when (or if) VTK begins
+to make greater use of namespaces.
+
 
 Unavailable methods
 -------------------
@@ -104,8 +127,7 @@ A method is not wrapped if
 2) it returns a pointer that is not a vtkObject pointer, char pointer,
    or void pointer, unless the method has an entry in the wrapping
    hints file -- again, vtkDataArray methods are an exception
-3) its parameter list contains a named enum constant
-4) it is an operator method (though many exceptions exist)
+3) it is an operator method (though many exceptions exist)
 
 
 Unavailable classes
@@ -243,6 +265,57 @@ using vtk.mutable(), which is in the vtk module:
 >>> plane.InsersectWithLine([0, 0, -1], [0, 0, 1], t, x)
 >>> print t
 0.5
+
+
+Observer, Event and CallData
+----------------------------
+
+* Simple callback
+
+Similarly to what can be done in C++, a python function can be called
+each time a VTK event is invoked on a given object:
+
+>>> def onObjectModified(object, event):
+>>>     print("object: %s - event: %s" % (object.GetClassName(), event))
+>>>
+>>> o = vtkObject()
+>>> o.AddObserver(vtkCommand.ModifiedEvent, onObjectModified)
+1
+>>> o.Modified()
+object: vtkObject - event: ModifiedEvent
+
+
+* Callback with CallData
+
+In case there is a "CallData" value associated with an event, in C++, you
+have to cast it from void* to the expected type using reinterpret_cast.
+For example, see http://www.vtk.org/Wiki/VTK/Examples/Cxx/Interaction/CallData
+
+The equivalent in python is to set a CallDataType attribute on the
+associated python callback. The supported CallDataType are vtk.VTK_STRING,
+vtk.VTK_OBJECT, vtk.VTK_INT, vtk.VTK_LONG, vtk.VTK_DOUBLE, vtk.VTK_FLOAT
+
+For example:
+
+>>> def onError(object, event, calldata):
+>>>     print("object: %s - event: %s - msg: %s" % (object.GetClassName(), event, calldata))
+>>>
+>>> onError.CallDataType = vtk.VTK_INT
+>>>
+>>> lt = vtkLookupTable()
+>>> lt.AddObserver(vtkCommand.ErrorEvent, onError)
+1
+>>> lt.SetTableRange(2,1)
+object: vtkLookupTable - event: ErrorEvent - msg: ERROR: In /home/jchris/Projects/VTK6/Common/Core/vtkLookupTable.cxx, line 122
+vtkLookupTable (0x6b40b30): Bad table range: [2, 1]
+
+
+For convenience, the CallDataType can also be specified where the function is first
+declared with the help of the "calldata_type" decorator:
+
+>>> @calldata_type(vtk.VTK_INT)
+>>> def onError(object, event, calldata):
+>>>     print("object: %s - event: %s - msg: %s" % (object.GetClassName(), event, calldata))
 
 
 Subclassing a VTK class

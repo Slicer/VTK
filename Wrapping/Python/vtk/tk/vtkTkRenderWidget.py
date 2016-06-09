@@ -87,9 +87,9 @@ class vtkTkRenderWidget(Tkinter.Widget):
 
         try:  # was a stereo rendering context requested?
             if kw['stereo']:
-	       renderWindow.StereoCapableWindowOn()
+               renderWindow.StereoCapableWindowOn()
                del kw['stereo']
-	except KeyError:
+        except KeyError:
             pass
 
         # check if focus should follow mouse
@@ -450,7 +450,7 @@ def vtkRenderWidgetConeExample():
     cone.SetResolution(8)
 
     coneMapper = vtk.vtkPolyDataMapper()
-    coneMapper.SetInput(cone.GetOutput())
+    coneMapper.SetInputConnection(cone.GetOutputPort())
 
     coneActor = vtk.vtkActor()
     coneActor.SetMapper(coneMapper)

@@ -28,27 +28,20 @@
 }
 {
    <insert a suppression name here>
-   core:PThread
-   fun:pthread_error
-   fun:pthread_attr_setscope
-   fun:_ZN16vtkMultiThreader19SingleMethodExecuteEv
-}
-{  
-   <insert a suppression name here>
    Memcheck:Cond
    fun:__stpcpy
    obj:/lib/libc-2.3.3.so
    fun:setlocale
    fun:TclpSetInitialEncodings
 }
-{  
+{
    <insert a suppression name here>
    Memcheck:Cond
    fun:__stpcpy
    fun:setlocale
    fun:TclpSetInitialEncodings
-}  
-{  
+}
+{
    <insert a suppression name here>
    Memcheck:Cond
    fun:__stpcpy
@@ -69,7 +62,7 @@
    fun:XOpenDisplay
    fun:TkpOpenDisplay
 }
-{  
+{
    <insert a suppression name here>
    Memcheck:Leak
    fun:malloc
@@ -77,7 +70,7 @@
    fun:XSetLocaleModifiers
    obj:/usr/lib/libtk8.4.so
 }
-{  
+{
    <insert a suppression name here>
    Memcheck:Leak
    fun:malloc
@@ -99,7 +92,7 @@
    fun:XOpenIM
    obj:/usr/lib/libtk8.4.so
 }
-{  
+{
    <insert a suppression name here>
    Memcheck:Leak
    fun:malloc
@@ -113,7 +106,7 @@
    fun:_XlcCurrentLC
    fun:XSetLocaleModifiers
 }
-{  
+{
    <insert a suppression name here>
    Memcheck:Leak
    fun:malloc
@@ -138,7 +131,7 @@
    fun:_XlcCurrentLC
    fun:XSetLocaleModifiers
 }
-{  
+{
    <insert a suppression name here>
    Memcheck:Leak
    fun:malloc
@@ -153,7 +146,7 @@
    fun:_XlcCurrentLC
    fun:XSetLocaleModifiers
 }
-{  
+{
    <insert a suppression name here>
    Memcheck:Leak
    fun:malloc
@@ -167,7 +160,7 @@
    fun:_XlcCurrentLC
    fun:XSetLocaleModifiers
 }
-{  
+{
    <insert a suppression name here>
    Memcheck:Leak
    fun:malloc
@@ -178,7 +171,7 @@
    fun:XOpenDisplay
    fun:TkpOpenDisplay
 }
-{  
+{
    <insert a suppression name here>
    Memcheck:Leak
    fun:malloc
@@ -211,7 +204,7 @@
    fun:_XlcCurrentLC
    fun:XSetLocaleModifiers
 }
-{  
+{
    <insert a suppression name here>
    Memcheck:Leak
    fun:malloc
@@ -220,7 +213,7 @@
    fun:XSetLocaleModifiers
    obj:/usr/lib/libtk8.4.so
 }
-{  
+{
    <insert a suppression name here>
    Memcheck:Leak
    fun:malloc
@@ -244,7 +237,7 @@
    fun:exit
    fun:Tcl_Exit
 }
-{  
+{
    <insert a suppression name here>
    Memcheck:Leak
    fun:malloc
@@ -257,7 +250,7 @@
    fun:XSetLocaleModifiers
 }
 
-{  
+{
    <insert a suppression name here>
    Memcheck:Leak
    fun:calloc
@@ -270,7 +263,7 @@
    fun:XSetLocaleModifiers
 }
 
-{  
+{
    <insert a suppression name here>
    Memcheck:Leak
    fun:malloc
@@ -283,7 +276,7 @@
    fun:XSetLocaleModifiers
 }
 
-{  
+{
    <insert a suppression name here>
    Memcheck:Leak
    fun:malloc
@@ -302,7 +295,7 @@
    fun:XSetLocaleModifiers
 }
 
-{  
+{
    <insert a suppression name here>
    Memcheck:Leak
    fun:malloc
@@ -315,7 +308,7 @@
    fun:XSetLocaleModifiers
 }
 
-{  
+{
    <insert a suppression name here>
    Memcheck:Leak
    fun:malloc
@@ -336,7 +329,7 @@
    fun:XSetLocaleModifiers
 }
 
-{  
+{
    <insert a suppression name here>
    Memcheck:Leak
    fun:malloc
@@ -355,7 +348,7 @@
    fun:XSetLocaleModifiers
 }
 
-{  
+{
    <insert a suppression name here>
    Memcheck:Leak
    fun:calloc
@@ -374,7 +367,7 @@
    fun:XSetLocaleModifiers
 }
 
-{  
+{
    <insert a suppression name here>
    Memcheck:Leak
    fun:calloc
@@ -508,16 +501,6 @@
    fun:TclExecuteByteCode
    fun:TclCompEvalObj
    fun:TclObjInterpProc
-   fun:TclEvalObjvInternal
-   fun:TclExecuteByteCode
-   fun:TclCompEvalObj
-   fun:Tcl_EvalObjEx
-   fun:NamespaceEvalCmd
-   fun:Tcl_NamespaceObjCmd
-   fun:TclEvalObjvInternal
-   fun:Tcl_EvalEx
-   fun:Tcl_Eval
-   fun:Tcl_GlobalEval
 }
 
 {
@@ -569,13 +552,6 @@
    fun:XSetLocaleModifiers
    fun:OpenIM
    fun:TkpOpenDisplay
-   fun:GetScreen
-   fun:CreateTopLevelWindow
-   fun:TkCreateMainWindow
-   fun:CreateFrame
-   fun:TkCreateFrame
-   fun:Initialize
-   fun:Tk_Init
 }
 
 {
@@ -692,13 +668,6 @@
    fun:XSetLocaleModifiers
    fun:OpenIM
    fun:TkpOpenDisplay
-   fun:GetScreen
-   fun:CreateTopLevelWindow
-   fun:TkCreateMainWindow
-   fun:CreateFrame
-   fun:TkCreateFrame
-   fun:Initialize
-   fun:Tk_Init
 }
 
 {
@@ -953,4 +922,195 @@
    fun:longest_match
    fun:deflate_slow
    fun:vtk_zlib_deflate
+}
+
+{
+   <insert a suppression name here>
+   Memcheck:Leak
+   fun:_Znwm
+   fun:_ZN10QMutexPool3getEPKv
+   fun:_ZN7QObjectD2Ev
+   fun:_ZN18QAbstractItemModelD2Ev
+   fun:_ZN25vtkQtAbstractModelAdapterD2Ev
+   fun:_ZN22vtkQtTableModelAdapterD1Ev
+   fun:_Z23TestQtTableModelAdapteriPPc
+   fun:main
+}
+{
+   <insert a suppression name here>
+   Memcheck:Leak
+   fun:_Znwm
+   fun:_ZN11QThreadData7currentEv
+   fun:_ZN7QObjectC2ER14QObjectPrivatePS_
+   fun:_ZN18QAbstractItemModelC2EP7QObject
+   fun:_ZN25vtkQtAbstractModelAdapterC2EP7QObject
+   fun:_ZN22vtkQtTableModelAdapterC1EP8vtkTableP7QObject
+   fun:_Z23TestQtTableModelAdapteriPPc
+   fun:main
+}
+{
+   <insert a suppression name here>
+   Memcheck:Leak
+   fun:_Znwm
+   fun:_ZN14QWaitConditionC1Ev
+   fun:_ZN14QThreadPrivateC1EP11QThreadData
+   fun:_ZN14QAdoptedThreadC1EP11QThreadData
+   fun:_ZN11QThreadData7currentEv
+   fun:_ZN7QObjectC2ER14QObjectPrivatePS_
+   fun:_ZN18QAbstractItemModelC2EP7QObject
+   fun:_ZN25vtkQtAbstractModelAdapterC2EP7QObject
+   fun:_ZN22vtkQtTableModelAdapterC1EP8vtkTableP7QObject
+   fun:_Z23TestQtTableModelAdapteriPPc
+   fun:main
+}
+{
+   <insert a suppression name here>
+   Memcheck:Leak
+   fun:_Znwm
+   fun:_ZN11QThreadData7currentEv
+   fun:_ZN7QObjectC2ER14QObjectPrivatePS_
+   fun:_ZN18QAbstractItemModelC2EP7QObject
+   fun:_ZN25vtkQtAbstractModelAdapterC2EP7QObject
+   fun:_ZN22vtkQtTableModelAdapterC1EP8vtkTableP7QObject
+   fun:_Z23TestQtTableModelAdapteriPPc
+   fun:main
+}
+{
+   <insert a suppression name here>
+   Memcheck:Leak
+   fun:_Znwm
+   fun:_ZN14QAdoptedThreadC1EP11QThreadData
+   fun:_ZN11QThreadData7currentEv
+   fun:_ZN7QObjectC2ER14QObjectPrivatePS_
+   fun:_ZN18QAbstractItemModelC2EP7QObject
+   fun:_ZN25vtkQtAbstractModelAdapterC2EP7QObject
+   fun:_ZN22vtkQtTableModelAdapterC1EP8vtkTableP7QObject
+   fun:_Z23TestQtTableModelAdapteriPPc
+   fun:main
+}
+{
+   <insert a suppression name here>
+   Memcheck:Leak
+   fun:_Znwm
+   fun:_ZN6QMutexC1ENS_13RecursionModeE
+   fun:_ZN11QThreadDataC1Ei
+   fun:_ZN11QThreadData7currentEv
+   fun:_ZN7QObjectC2ER14QObjectPrivatePS_
+   fun:_ZN18QAbstractItemModelC2EP7QObject
+   fun:_ZN25vtkQtAbstractModelAdapterC2EP7QObject
+   fun:_ZN22vtkQtTableModelAdapterC1EP8vtkTableP7QObject
+   fun:_Z23TestQtTableModelAdapteriPPc
+   fun:main
+}
+{
+   <insert a suppression name here>
+   Memcheck:Leak
+   fun:_Znwm
+   fun:_Z14signalSlotLockPK7QObject
+   fun:_ZN7QObjectD2Ev
+   fun:_ZN18QAbstractItemModelD2Ev
+   fun:_ZN25vtkQtAbstractModelAdapterD2Ev
+   fun:_ZN22vtkQtTableModelAdapterD1Ev
+   fun:_Z23TestQtTableModelAdapteriPPc
+   fun:main
+}
+{
+    <insert_a_suppression_name_here>
+    Memcheck:Value8
+    fun:fetch_texel_2d_f_rgba8888
+    fun:texture_get_row
+    fun:_swrast_get_dest_rgba
+    fun:_swrast_mask_rgba_span
+    fun:clear_rgba_buffer_with_masking
+    fun:_swrast_Clear
+    fun:_ZN17vtkOpenGLRenderer5ClearEv
+    fun:_ZN13vtkCameraPass6RenderEPK14vtkRenderState
+    fun:_ZN21vtkShadowMapBakerPass6RenderEPK14vtkRenderState
+    fun:_ZN15vtkSequencePass6RenderEPK14vtkRenderState
+    fun:_ZN13vtkCameraPass6RenderEPK14vtkRenderState
+    fun:_ZN17vtkOpenGLRenderer12DeviceRenderEv
+    fun:_ZN11vtkRenderer6RenderEv
+    fun:_ZN21vtkRendererCollection6RenderEv
+    fun:_ZN15vtkRenderWindow14DoStereoRenderEv
+    fun:_ZN15vtkRenderWindow10DoFDRenderEv
+    fun:_ZN15vtkRenderWindow10DoAARenderEv
+    fun:_ZN15vtkRenderWindow6RenderEv
+    fun:_ZN22vtkXOpenGLRenderWindow6RenderEv
+    fun:_Z17TestShadowMapPassiPPc
+    fun:main
+}
+{
+    <insert_a_suppression_name_here>
+    Memcheck:Value8
+    fun:fetch_texel_2d_f_rgba8888
+    fun:texture_get_row
+    fun:_swrast_get_dest_rgba
+    fun:_swrast_mask_rgba_span
+    fun:clear_rgba_buffer_with_masking
+    fun:_swrast_Clear
+    fun:_ZN17vtkOpenGLRenderer5ClearEv
+    fun:_ZN13vtkCameraPass6RenderEPK14vtkRenderState
+    fun:_ZN21vtkShadowMapBakerPass6RenderEPK14vtkRenderState
+    fun:_ZN15vtkSequencePass6RenderEPK14vtkRenderState
+    fun:_ZN13vtkCameraPass6RenderEPK14vtkRenderState
+    fun:_ZN17vtkOpenGLRenderer12DeviceRenderEv
+    fun:_ZN11vtkRenderer6RenderEv
+    fun:_ZN21vtkRendererCollection6RenderEv
+    fun:_ZN15vtkRenderWindow14DoStereoRenderEv
+    fun:_ZN15vtkRenderWindow10DoFDRenderEv
+    fun:_ZN15vtkRenderWindow10DoAARenderEv
+    fun:_ZN15vtkRenderWindow6RenderEv
+    fun:_ZN22vtkXOpenGLRenderWindow6RenderEv
+    fun:_Z17TestShadowMapPassiPPc
+    fun:main
+}
+{
+    <insert_a_suppression_name_here>
+    Memcheck:Value8
+    fun:fetch_texel_2d_f_rgba8888
+    fun:texture_get_row
+    fun:_swrast_get_dest_rgba
+    fun:_swrast_mask_rgba_span
+    fun:clear_rgba_buffer_with_masking
+    fun:_swrast_Clear
+    fun:_ZN17vtkOpenGLRenderer5ClearEv
+    fun:_ZN13vtkCameraPass6RenderEPK14vtkRenderState
+    fun:_ZN21vtkShadowMapBakerPass6RenderEPK14vtkRenderState
+    fun:_ZN15vtkSequencePass6RenderEPK14vtkRenderState
+    fun:_ZN13vtkCameraPass6RenderEPK14vtkRenderState
+    fun:_ZN17vtkOpenGLRenderer12DeviceRenderEv
+    fun:_ZN11vtkRenderer6RenderEv
+    fun:_ZN21vtkRendererCollection6RenderEv
+    fun:_ZN15vtkRenderWindow14DoStereoRenderEv
+    fun:_ZN15vtkRenderWindow10DoFDRenderEv
+    fun:_ZN15vtkRenderWindow10DoAARenderEv
+    fun:_ZN15vtkRenderWindow6RenderEv
+    fun:_ZN22vtkXOpenGLRenderWindow6RenderEv
+    fun:_Z17TestShadowMapPassiPPc
+    fun:main
+}
+{
+    <insert_a_suppression_name_here>
+    Memcheck:Value8
+    fun:fetch_texel_2d_f_rgba8888
+    fun:texture_get_row
+    fun:_swrast_get_dest_rgba
+    fun:_swrast_mask_rgba_span
+    fun:clear_rgba_buffer_with_masking
+    fun:_swrast_Clear
+    fun:_ZN17vtkOpenGLRenderer5ClearEv
+    fun:_ZN13vtkCameraPass6RenderEPK14vtkRenderState
+    fun:_ZN21vtkShadowMapBakerPass6RenderEPK14vtkRenderState
+    fun:_ZN15vtkSequencePass6RenderEPK14vtkRenderState
+    fun:_ZN13vtkCameraPass6RenderEPK14vtkRenderState
+    fun:_ZN17vtkOpenGLRenderer12DeviceRenderEv
+    fun:_ZN11vtkRenderer6RenderEv
+    fun:_ZN21vtkRendererCollection6RenderEv
+    fun:_ZN15vtkRenderWindow14DoStereoRenderEv
+    fun:_ZN15vtkRenderWindow10DoFDRenderEv
+    fun:_ZN15vtkRenderWindow10DoAARenderEv
+    fun:_ZN15vtkRenderWindow6RenderEv
+    fun:_ZN22vtkXOpenGLRenderWindow6RenderEv
+    fun:_Z17TestShadowMapPassiPPc
+    fun:main
 }

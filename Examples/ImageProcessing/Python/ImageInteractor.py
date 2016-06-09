@@ -22,7 +22,7 @@ shiftScale.SetScale(0.07)
 shiftScale.SetOutputScalarTypeToUnsignedChar()
 
 ia = vtk.vtkImageActor()
-ia.SetInput(shiftScale.GetOutput())
+ia.GetMapper().SetInputConnection(shiftScale.GetOutputPort())
 
 # Create the RenderWindow, Renderer and both Actors
 ren = vtk.vtkRenderer()
@@ -58,13 +58,13 @@ pd = vtk.vtkPolyData()
 pd.SetPoints(pts)
 pd.SetLines(lines)
 bboxMapper = vtk.vtkPolyDataMapper2D()
-bboxMapper.SetInput(pd)
+bboxMapper.SetInputData(pd)
 bboxActor = vtk.vtkActor2D()
 bboxActor.SetMapper(bboxMapper)
 bboxActor.GetProperty().SetColor(1, 0, 0)
 ren.AddViewProp(bboxActor)
 
-### Functions for callbacks 
+### Functions for callbacks
 X = 0
 Y = 0
 bboxEnabled = 0
@@ -81,7 +81,7 @@ def StartZoom(obj, event):
 
     bboxEnabled = 1
     bboxActor.VisibilityOn()
- 
+
 
 def MouseMove(obj, event):
     global X, Y, bboxEnabled
@@ -92,8 +92,8 @@ def MouseMove(obj, event):
         pts.SetPoint(1, x, Y, 0)
         pts.SetPoint(2, x, y, 0)
         pts.SetPoint(3, X, y, 0)
-        renWin.Render() 
- 
+        renWin.Render()
+
 
 # Do the hard stuff: pan and dolly
 def EndZoom(obj, event):
@@ -119,7 +119,7 @@ def EndZoom(obj, event):
     camera = ren.GetActiveCamera()
     focalPt = camera.GetFocalPoint()
     focalX, focalY, focalZ = focalPt
-    
+
     position = camera.GetPosition()
     positionX, positionY, positionZ = position
 
@@ -140,7 +140,7 @@ def EndZoom(obj, event):
         deltaY = p1Y-p2Y
     else:
        deltaY = p2Y-p1Y
- 
+
     winSize = renWin.GetSize()
     winX, winY = winSize
 
@@ -152,7 +152,7 @@ def EndZoom(obj, event):
         dolly = 1.0+1.0/(2.0*sx)
     else:
         dolly = 1.0+1.0/(2.0*sy)
- 
+
     camera.Dolly(dolly)
     ren.ResetCameraClippingRange()
 

@@ -43,7 +43,7 @@ profile SetLines lines
 
 # Extrude profile to make bottle
 vtkRotationalExtrusionFilter extrude
-extrude SetInput profile
+extrude SetInputData profile
 extrude SetResolution 60
 
 vtkPolyDataMapper map
@@ -108,7 +108,7 @@ KeyAdd Azimuth [$camera GetPosition]
 $camera Azimuth -1
 KeyAdd Azimuth [$camera GetPosition]
 
-# Run the animation - NumberOfFrames frames - 
+# Run the animation - NumberOfFrames frames -
 # using interpolation
 KeyRun Azimuth $NumberOfFrames
 

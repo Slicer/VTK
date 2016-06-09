@@ -42,16 +42,14 @@ int main( int, char *[] )
   vtkRenderWindowInteractor* iren = vtkRenderWindowInteractor::New();
     iren->SetRenderWindow( renWin);
 
-    planeSource->Update();
-
-  vtkPlaneSource* planeSource;
+  vtkPlaneSource* planeSource = vtkPlaneSource::New();
     planeSource->Update();
 
   vtkPolyDataMapper* planeSourceMapper = vtkPolyDataMapper::New();
     planeSourceMapper->SetInput(planeSource->GetOutput());
   vtkActor* planeSourceActor = vtkActor::New();
     planeSourceActor->SetMapper(planeSourceMapper);
-    
+
   vtkSplineWidget* spline = vtkSplineWidget::New();
     spline->SetInteractor( iren);
     spline->SetInput(planeSource->GetOutput());

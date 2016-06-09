@@ -1,50 +1,66 @@
-PROJECT(QtEvents)
+cmake_minimum_required(VERSION 2.8.8)
+if(POLICY CMP0020)
+  cmake_policy(SET CMP0020 NEW)
+endif()
+if(POLICY CMP0025)
+  cmake_policy(SET CMP0025 NEW) # CMake 3.0
+endif()
+if(POLICY CMP0043)
+  cmake_policy(SET CMP0043 NEW) # CMake 3.0
+endif()
+if(POLICY CMP0053)
+  cmake_policy(SET CMP0053 NEW) # CMake 3.1
+endif()
+project(QtEvents)
 
-IF(NOT VTK_BINARY_DIR)
-FIND_PACKAGE(VTK)
-IF(NOT VTK_DIR)
-  MESSAGE(FATAL_ERROR "Please set VTK_DIR.")
-ENDIF(NOT VTK_DIR)
-INCLUDE(${VTK_USE_FILE})
-ENDIF(NOT VTK_BINARY_DIR)
-
-# use what QVTK built with
-SET(QT_QMAKE_EXECUTABLE ${VTK_QT_QMAKE_EXECUTABLE} CACHE FILEPATH "")
-SET(QT_MOC_EXECUTABLE ${VTK_QT_MOC_EXECUTABLE} CACHE FILEPATH "")
-SET(QT_UIC_EXECUTABLE ${VTK_QT_UIC_EXECUTABLE} CACHE FILEPATH "")
-FIND_PACKAGE(Qt4)
-IF(QT_USE_FILE)
-  INCLUDE(${QT_USE_FILE})
-ELSE(QT_USE_FILE)
-  SET(QT_LIBRARIES   ${QT_QT_LIBRARY})
-ENDIF(QT_USE_FILE)
-
-SET (SRCS
-  main.cxx
+find_package(VTK COMPONENTS
+  vtkCommonCore
+  vtkFiltersSources
+  vtkGUISupportQt
 )
+include(${VTK_USE_FILE})
+
+if("${VTK_QT_VERSION}" STREQUAL "")
+  message(FATAL_ERROR "VTK was not built with Qt")
+endif()
+
+set( Srcs main.cxx GUI4.cxx )
+
+set( Hdrs GUI4.h )
+
+set( MOC_Hdrs GUI4.h )
+
+set( UIs GUI4.ui )
 
 # Use the include path and library for Qt that is used by VTK.
-INCLUDE_DIRECTORIES(
-        ${QT_INCLUDE_DIR}
-        ${CMAKE_CURRENT_BINARY_DIR}
-        ${CMAKE_CURRENT_SOURCE_DIR}
+include_directories(
+  ${CMAKE_CURRENT_BINARY_DIR}
+  ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
-INCLUDE_DIRECTORIES(${VTK_TDX_INCLUDE_PATH})
+# Instruct CMake to run moc automatically when needed.
+set(CMAKE_AUTOMOC ON)
 
-QT4_WRAP_UI(UI_SRCS GUI4.ui)
-QT4_WRAP_CPP(MOC_SRCS GUI4.h)
-SET(SRCS ${SRCS} ${MOC_SRCS} GUI4.cxx GUI4.h)
+if(VTK_QT_VERSION VERSION_GREATER "4")
+  find_package(Qt5 COMPONENTS Widgets)
+  qt5_wrap_ui(UI_Srcs ${UIs})
 
-ADD_EXECUTABLE( qtevents MACOSX_BUNDLE ${SRCS} ${UI_SRCS})
+  add_executable(qtevents
+    MACOSX_BUNDLE  ${Srcs} ${Hdrs} ${UI_Srcs} ${MOC_Hdrs})
+  qt5_use_modules(qtevents Core Gui Widgets)
+  target_link_libraries(qtevents ${VTK_LIBRARIES})
+else()
+  find_package(Qt4 REQUIRED)
+  include(${QT_USE_FILE})
+  # Use what VTK built with
+  set(QT_QMAKE_EXECUTABLE ${VTK_QT_QMAKE_EXECUTABLE} CACHE FILEPATH "")
+  set(QT_MOC_EXECUTABLE ${VTK_QT_MOC_EXECUTABLE} CACHE FILEPATH "")
+  set(QT_UIC_EXECUTABLE ${VTK_QT_UIC_EXECUTABLE} CACHE FILEPATH "")
+  qt4_wrap_ui(UI_Srcs ${UIs})
 
-TARGET_LINK_LIBRARIES( qtevents
-  QVTK
-  ${QT_LIBRARIES}
-  vtkRendering
-  vtkGraphics
-  vtkIO
-  vtkCommon
-)
-
-
+  add_executable(qtevents MACOSX_BUNDLE ${Srcs} ${Hdrs} ${UI_Srcs} ${MOC_Hdrs})
+  target_link_libraries(qtevents
+    ${QT_LIBRARIES}
+    ${VTK_LIBRARIES}
+  )
+endif()

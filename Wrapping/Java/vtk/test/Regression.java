@@ -14,6 +14,8 @@ package vtk.test;
  PURPOSE.  See the above copyright notice for more information.
 
  =========================================================================*/
+import javax.swing.SwingUtilities;
+
 import vtk.vtkActor;
 import vtk.vtkConeSource;
 import vtk.vtkImageData;
@@ -31,9 +33,11 @@ import vtk.vtkUnsignedShortArray;
 import vtk.vtkWindowToImageFilter;
 
 public class Regression {
-    public static void main(String[] args) {
-        vtkJavaTesting.Initialize(args, true);
 
+  public static void main(final String[] args) {
+    SwingUtilities.invokeLater(new Runnable() {
+      public void run() {
+        vtkJavaTesting.Initialize(args, true);
         vtkShortArray array = new vtkShortArray();
         array.InsertNextTuple1(3.0);
         array.InsertNextTuple1(1.0);
@@ -56,8 +60,8 @@ public class Regression {
         int cc;
         System.out.print("[");
         for (cc = 0; cc < carray.length; cc++) {
-            short i = carray[cc];
-            System.out.print(i);
+          short i = carray[cc];
+          System.out.print(i);
         }
         System.out.println("]");
 
@@ -65,8 +69,8 @@ public class Regression {
         narray.SetJavaArray(carray);
         System.out.print("[");
         for (cc = 0; cc <= narray.GetMaxId(); cc++) {
-            int i = narray.GetValue(cc);
-            System.out.print(i);
+          int i = narray.GetValue(cc);
+          System.out.print(i);
         }
         System.out.println("]");
 
@@ -78,7 +82,7 @@ public class Regression {
         vtkConeSource cone = new vtkConeSource();
         cone.SetResolution(8);
         vtkPolyDataMapper coneMapper = new vtkPolyDataMapper();
-        coneMapper.SetInput(cone.GetOutput());
+        coneMapper.SetInputConnection(cone.GetOutputPort());
 
         vtkActor coneActor = new vtkActor();
         coneActor.SetMapper(coneMapper);
@@ -104,71 +108,71 @@ public class Regression {
         nimage.SetDimensions(image.GetDimensions());
         nimage.SetSpacing(image.GetSpacing());
         nimage.SetOrigin(image.GetOrigin());
-        nimage.SetScalarType(image.GetScalarType());
-        nimage.SetNumberOfScalarComponents(image.GetNumberOfScalarComponents());
-        nimage.AllocateScalars();
+        nimage.AllocateScalars(image.GetScalarType(), image.GetNumberOfScalarComponents());
         vtkUnsignedCharArray nida = (vtkUnsignedCharArray) nimage.GetPointData().GetScalars();
         nida.SetJavaArray(barray);
 
         int retVal0 = vtkJavaTesting.PASSED;
 
         for (cc = 0; cc <= da.GetMaxId(); cc++) {
-            int v1 = 0, v2 = 0, v3 = 0;
-            v1 = da.GetValue(cc);
-            if (cc <= nda.GetMaxId()) {
-                v2 = nda.GetValue(cc);
-            } else {
-                System.out.println("Cannot find point " + cc + " in nda");
-                retVal0 = vtkJavaTesting.FAILED;
-            }
-            if (cc <= nida.GetMaxId()) {
-                v3 = nida.GetValue(cc);
-            } else {
-                System.out.println("Cannot find point " + cc + " in nida");
-                retVal0 = vtkJavaTesting.FAILED;
-            }
-            if (v1 != v2 || v1 != v3) {
-                System.out.println("Wrong point: " + v1 + " <> " + v2 + " <> " + v3);
-                retVal0 = vtkJavaTesting.FAILED;
-            }
+          int v1 = 0, v2 = 0, v3 = 0;
+          v1 = da.GetValue(cc);
+          if (cc <= nda.GetMaxId()) {
+            v2 = nda.GetValue(cc);
+          } else {
+            System.out.println("Cannot find point " + cc + " in nda");
+            retVal0 = vtkJavaTesting.FAILED;
+          }
+          if (cc <= nida.GetMaxId()) {
+            v3 = nida.GetValue(cc);
+          } else {
+            System.out.println("Cannot find point " + cc + " in nida");
+            retVal0 = vtkJavaTesting.FAILED;
+          }
+          if (v1 != v2 || v1 != v3) {
+            System.out.println("Wrong point: " + v1 + " <> " + v2 + " <> " + v3);
+            retVal0 = vtkJavaTesting.FAILED;
+          }
         }
 
         vtkImageDifference imgDiff = new vtkImageDifference();
-        imgDiff.SetInput(nimage);
-        imgDiff.SetImage(image);
+        imgDiff.SetInputData(nimage);
+        imgDiff.SetImageConnection(w2i.GetOutputPort());
         imgDiff.Update();
 
         int retVal1 = vtkJavaTesting.PASSED;
         if (imgDiff.GetThresholdedError() != 0) {
-            System.out.println("Problem with array conversion. Image difference is: " + imgDiff.GetThresholdedError());
-            vtkPNGWriter wr = new vtkPNGWriter();
-            wr.SetInput(image);
-            wr.SetFileName("im1.png");
-            wr.Write();
-            wr.SetInput(nimage);
-            wr.SetFileName("im2.png");
-            wr.Write();
-            wr.SetInput(imgDiff.GetOutput());
-            wr.SetFileName("diff.png");
-            wr.Write();
-            retVal1 = vtkJavaTesting.FAILED;
+          System.out.println("Problem with array conversion. Image difference is: " + imgDiff.GetThresholdedError());
+          vtkPNGWriter wr = new vtkPNGWriter();
+          wr.SetInputConnection(w2i.GetOutputPort());
+          wr.SetFileName("im1.png");
+          wr.Write();
+          wr.SetInputData(nimage);
+          wr.SetFileName("im2.png");
+          wr.Write();
+          wr.SetInputConnection(imgDiff.GetOutputPort());
+          wr.SetFileName("diff.png");
+          wr.Write();
+          retVal1 = vtkJavaTesting.FAILED;
         }
 
         int retVal2 = vtkJavaTesting.PASSED;
         if (vtkJavaTesting.IsInteractive()) {
-            iren.Start();
+          iren.Start();
         } else {
-            retVal2 = vtkJavaTesting.RegressionTest(renWin, 10);
+          retVal2 = vtkJavaTesting.RegressionTest(renWin, 10);
         }
 
         vtkObject.JAVA_OBJECT_MANAGER.deleteAll();
 
         if (retVal0 != vtkJavaTesting.PASSED) {
-            vtkJavaTesting.Exit(retVal0);
+          vtkJavaTesting.Exit(retVal0);
         }
         if (retVal1 != vtkJavaTesting.PASSED) {
-            vtkJavaTesting.Exit(retVal1);
+          vtkJavaTesting.Exit(retVal1);
         }
         vtkJavaTesting.Exit(retVal2);
-    }
+      }
+    });
+  }
 }

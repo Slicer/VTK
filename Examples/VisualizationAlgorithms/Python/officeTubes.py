@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# This example demonstrates the use of streamlines generated from seeds, 
+# This example demonstrates the use of streamlines generated from seeds,
 # combined with a tube filter to create several streamtubes.
 
 import vtk
@@ -41,7 +41,7 @@ seeds.SetNumberOfPoints(6)
 integ = vtk.vtkRungeKutta4()
 streamer = vtk.vtkStreamLine()
 streamer.SetInputConnection(reader.GetOutputPort())
-streamer.SetSource(seeds.GetOutput())
+streamer.SetSourceConnection(seeds.GetOutputPort())
 streamer.SetMaximumPropagationTime(500)
 streamer.SetStepLength(0.5)
 streamer.SetIntegrationStepLength(0.05)

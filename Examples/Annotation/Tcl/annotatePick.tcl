@@ -23,7 +23,7 @@ vtkLODActor sphereActor
 vtkConeSource cone
 vtkGlyph3D glyph
     glyph SetInputConnection [sphere GetOutputPort]
-    glyph SetSource [cone GetOutput]
+    glyph SetSourceConnection [cone GetOutputPort]
     glyph SetVectorModeToUseNormal
     glyph SetScaleModeToScaleByVector
     glyph SetScaleFactor 0.25
@@ -85,10 +85,10 @@ proc annotatePick {} {
 
     } else {
 	set selPt [picker GetSelectionPoint]
-	set x [lindex $selPt 0] 
+	set x [lindex $selPt 0]
 	set y [lindex $selPt 1]
 	set pickPos [picker GetPickPosition]
-	set xp [lindex $pickPos 0] 
+	set xp [lindex $pickPos 0]
 	set yp [lindex $pickPos 1]
 	set zp [lindex $pickPos 2]
 
@@ -102,3 +102,4 @@ proc annotatePick {} {
 
 # Pick the cell at this location.
 picker Pick 85 126 0 ren1
+iren Start

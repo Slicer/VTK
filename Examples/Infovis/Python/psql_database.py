@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 from vtk import *
 
 # Network Database
@@ -6,7 +7,7 @@ database.Open("")
 
 
 vertex_query_string = """
-select d.ip, d.name, i.country_name,i.region_name,i.city_name,i.latitude, i.longitude 
+select d.ip, d.name, i.country_name,i.region_name,i.city_name,i.latitude, i.longitude
 from  dnsnames d, ipligence i where ip4(d.ip)<<= ip_range;
 """
 
@@ -32,9 +33,9 @@ edge_table.SetQuery(edge_query)
 graph = vtkTableToGraph()
 graph.AddInputConnection(0,edge_table.GetOutputPort())
 graph.AddInputConnection(1,vertex_table.GetOutputPort())
-graph.AddLinkVertex("src", "ip", False) 
-graph.AddLinkVertex("dst", "ip", False) 
-graph.AddLinkEdge("src", "dst") 
+graph.AddLinkVertex("src", "ip", False)
+graph.AddLinkVertex("dst", "ip", False)
+graph.AddLinkEdge("src", "dst")
 
 
 view = vtkGraphLayoutView()

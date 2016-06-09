@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 from vtk import *
 import sys
 import os
@@ -6,7 +7,7 @@ import time
 myProcId = 0
 numProcs = 1
 
-compManager = vtkCompositeManager()
+compManager = vtkCompositeRenderManager()
 if compManager.GetController():
     myProcId = compManager.GetController().GetLocalProcessId()
     numProcs = compManager.GetController().GetNumberOfProcesses()
@@ -20,7 +21,7 @@ try:
     del v
 except Exception, (bar):
     print "No mesa", bar
-    
+
 
 
 #print "I am process: %d / %d" % (myProcId, numProcs)
@@ -31,8 +32,8 @@ renWin = vtkRenderWindow()
 renWin.AddRenderer(ren)
 renWin.SetSize(300,300)
 
-if myProcId:
-    renWin.OffScreenRenderingOn()
+#if myProcId:
+#    renWin.OffScreenRenderingOn()
 
 
 # create an actor and give it cone geometry
@@ -67,6 +68,7 @@ if myProcId == 0:
     iren = vtkRenderWindowInteractor()
     iren.SetRenderWindow(renWin)
     iren.AddObserver("ExitEvent", ExitMaster)
+    iren.Initialize()
     iren.Start()
     #renWin.Render()
     #renWin.Render()

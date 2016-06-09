@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 from vtk import *
 import os.path
 
@@ -17,7 +18,7 @@ queryToTable.SetQuery(query)
 queryToTable.Update()
 
 T = queryToTable.GetOutput()
-    
+
 print "Query Results:"
 T.Dump(12)
 

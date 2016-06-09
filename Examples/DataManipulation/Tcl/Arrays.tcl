@@ -66,7 +66,7 @@ polydata SetStrips strips
 # Create the mapper and set the appropriate scalar range
 # (default is (0,1)
 vtkPolyDataMapper mapper
-mapper SetInput polydata
+mapper SetInputData polydata
 mapper SetScalarRange 0 40
 
 # Create an actor.
@@ -86,3 +86,4 @@ iren AddObserver UserEvent {wm deiconify .vtkInteract}
 iren Initialize
 
 wm withdraw .
+iren Start

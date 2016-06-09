@@ -29,7 +29,7 @@ vtkPolyDataMapper* task1(vtkRenderWindow* renWin, double data,
 
   // Synthetic image source.
   vtkRTAnalyticSource* source1 = vtkRTAnalyticSource::New();
-  source1->SetWholeExtent (-1*iextent, iextent, -1*iextent, iextent, 
+  source1->SetWholeExtent (-1*iextent, iextent, -1*iextent, iextent,
                            -1*iextent, iextent );
   source1->SetCenter(0, 0, 0);
   source1->SetStandardDeviation( 0.5 );
@@ -56,12 +56,12 @@ vtkPolyDataMapper* task1(vtkRenderWindow* renWin, double data,
   // Probe magnitude with iso-surface.
   vtkProbeFilter* probe = vtkProbeFilter::New();
   probe->SetInputConnection(contour->GetOutputPort());
-  probe->SetSource(magn->GetOutput());
+  probe->SetSourceConnection(magn->GetOutputPort());
   probe->SpatialMatchOn();
 
   // Rendering objects.
   vtkPolyDataMapper* mapper = vtkPolyDataMapper::New();
-  mapper->SetInput(probe->GetPolyDataOutput());
+  mapper->SetInputData(probe->GetPolyDataOutput());
   mapper->SetScalarRange(50, 180);
   mapper->ImmediateModeRenderingOn();
 

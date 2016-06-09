@@ -22,11 +22,11 @@ vtkPolyData profile
 # value is output.
 #
 vtkDelaunay3D del
-    del SetInput profile
+    del SetInputData profile
     del SetTolerance 0.01
     del SetAlpha 0.2
     del BoundingTriangulationOff
-    
+
 # Shrink the result to help see it better.
 vtkShrinkFilter shrink
     shrink SetInputConnection [del GetOutputPort]
@@ -64,6 +64,6 @@ renWin Render
 
 # prevent the tk window from showing up then start the event loop
 wm withdraw .
-
+iren Start
 
 

@@ -3,6 +3,29 @@ categories."""
 
 import sys, os, vtk
 
+def calldata_type(type):
+    """set_call_data_type(type) -- convenience decorator to easily set the CallDataType attribute
+    for python function used as observer callback.
+    For example:
+
+    import vtk
+
+    @vtk.calldata_type(vtk.VTK_STRING)
+    def onError(caller, event, calldata):
+        print("caller: %s - event: %s - msg: %s" % (caller.GetClassName(), event, calldata))
+
+    lt = vtk.vtkLookupTable()
+    lt.AddObserver(vtk.vtkCommand.ErrorEvent, onError)
+    lt.SetTableRange(2,1)
+    """
+    supported_call_data_types = ['string0', vtk.VTK_STRING, vtk.VTK_OBJECT, vtk.VTK_INT, vtk.VTK_LONG, vtk.VTK_DOUBLE, vtk.VTK_FLOAT]
+    if type not in supported_call_data_types:
+        raise TypeError("'%s' is not a supported VTK call data type. Supported types are: %s" % (type, supported_call_data_types))
+    def wrap(f):
+        f.CallDataType = type
+        return f
+    return wrap
+
 #----------------------------------------------------------------------
 # the following functions are for the vtk regression testing and examples
 
@@ -23,6 +46,21 @@ def vtkGetDataRoot():
             dataRoot = '../../../../VTKData'
 
     return dataRoot
+
+def vtkGetTempDir():
+    """vtkGetTempDir() -- return vtk testing temp dir
+    """
+    tempIndex=-1;
+    for i in range(0, len(sys.argv)):
+        if sys.argv[i] == '-T' and i < len(sys.argv)-1:
+            tempIndex = i+1
+
+    if tempIndex != -1:
+        tempDir = sys.argv[tempIndex]
+    else:
+        tempDir = '.'
+
+    return tempDir
 
 
 def vtkRegressionTestImage( renWin ):
@@ -47,7 +85,7 @@ def vtkRegressionTestImage( renWin ):
         else:
             rt_pngw = vtk.vtkPNGWriter()
             rt_pngw.SetFileName(fname)
-            rt_pngw.SetInput(rt_w2if.GetOutput())
+            rt_pngw.SetInputConnection(rt_w2if.GetOutputPort())
             rt_pngw.Write()
             rt_pngw = None
 
@@ -55,8 +93,8 @@ def vtkRegressionTestImage( renWin ):
         rt_png.SetFileName(fname)
 
         rt_id = vtk.vtkImageDifference()
-        rt_id.SetInput(rt_w2if.GetOutput())
-        rt_id.SetImage(rt_png.GetOutput())
+        rt_id.SetInputConnection(rt_w2if.GetOutputPort())
+        rt_id.SetImageConnection(rt_png.GetOutputPort())
         rt_id.Update()
 
         if rt_id.GetThresholdedError() <= 10:

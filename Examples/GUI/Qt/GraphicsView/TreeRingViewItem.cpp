@@ -2,7 +2,6 @@
 #include "TreeRingViewItem.h"
 #include "vtkTreeRingView.h"
 #include "vtkGenericOpenGLRenderWindow.h"
-#include "vtkgl.h"
 #include "QVTKInteractor.h"
 #include "vtkXMLTreeReader.h"
 #include "vtkRenderedTreeAreaRepresentation.h"
@@ -19,7 +18,6 @@ TreeRingViewItem::TreeRingViewItem(QGLContext* ctx, QGraphicsItem* p)
   this->setPalette(pal);
 
   TreeRingView.TakeReference(vtkTreeRingView::New());
-  TreeRingView->SetInteractor(this->GetInteractor());
   TreeRingView->SetRenderWindow(this->GetRenderWindow());
 
   QFile f1(":/Data/vtkclasses.xml");

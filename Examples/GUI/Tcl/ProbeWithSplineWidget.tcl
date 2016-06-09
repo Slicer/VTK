@@ -1,21 +1,21 @@
 package require vtk
 package require vtkinteraction
 
-# This example demonstrates how to use the vtkImagePlaneWidget 
-# and a vtkSplineWidger to do profile probing of a 3D image 
+# This example demonstrates how to use the vtkImagePlaneWidget
+# and a vtkSplineWidger to do profile probing of a 3D image
 # dataset.  The use of vtkAnnotatedCubeActor, vtkAxesActor and
 # vtkOrientationMarkerWidget is also demostrated.
-# 
+#
 # GUI controls are provided as follows:
-# a) x,y,z buttons set the widgets to orthonormal 
+# a) x,y,z buttons set the widgets to orthonormal
 #    positioning, set the horizontal slider to move the
 #    widgets along their common plane normal, and set the
 #    camera to face the widgets
 # b) right clicking on x,y,z buttons pops up a menu to set
-#    the widget's reslice interpolation mode 
+#    the widget's reslice interpolation mode
 # c) when in axes aligned, orthogonal orientation, the slider
 #    will move the widget by slice index within the appropriate range
-# 
+#
 
 # Start by loading some data.
 #
@@ -27,7 +27,7 @@ vtkVolume16Reader v16
   v16 SetFilePrefix "$VTK_DATA_ROOT/Data/headsq/quarter"
   v16 Update
 
-scan [[v16 GetOutput] GetWholeExtent] "%d %d %d %d %d %d" \
+scan [[v16 GetExecutive] GetWholeExtent [v16 GetOutputInformation 0]] "%d %d %d %d %d %d" \
         xMin xMax yMin yMax zMin zMax
 
 set spacing [[v16 GetOutput] GetSpacing]
@@ -43,10 +43,10 @@ set oz [lindex $origin 2]
 # Create an outline of the 3D image data bounds.
 #
 vtkOutlineFilter outline
-  outline SetInput [ v16 GetOutput ]
+  outline SetInputConnection [ v16 GetOutputPort ]
 
 vtkPolyDataMapper outlineMapper
-  outlineMapper SetInput [ outline GetOutput ]
+  outlineMapper SetInputConnection [ outline GetOutputPort ]
 
 vtkActor outlineActor
   outlineActor SetMapper outlineMapper
@@ -74,10 +74,10 @@ vtkImagePlaneWidget ipw
   ipw DisplayTextOn
   ipw TextureInterpolateOff
   ipw UserControlledLookupTableOff
-  ipw SetInput [ v16 GetOutput ]
+  ipw SetInputConnection [ v16 GetOutputPort ]
   ipw SetResliceInterpolateToNearestNeighbour
   ipw KeyPressActivationOff
-  [ ipw GetPlaneProperty ] SetColor 1 0 0  
+  [ ipw GetPlaneProperty ] SetColor 1 0 0
   set xmode [ ipw GetResliceInterpolate ]
   set ymode [ ipw GetResliceInterpolate ]
   set zmode [ ipw GetResliceInterpolate ]
@@ -88,7 +88,7 @@ vtkImagePlaneWidget ipw
 # Create a vtkSplineWidget to interactively probe the data.
 #
 vtkSplineWidget spline
-  spline SetInput [ v16 GetOutput ]
+  spline SetInputConnection [ v16 GetOutputPort ]
   spline PlaceWidget
   spline SetPriority 1.0
   spline KeyPressActivationOff
@@ -108,13 +108,13 @@ vtkPolyData poly
 # The filter to probe the image data.
 #
 vtkProbeFilter probe
-  probe SetInput poly
-  probe SetSource [ v16 GetOutput ]
+  probe SetInputData poly
+  probe SetSourceConnection [ v16 GetOutputPort ]
 
 # The plot of the profile data.
 #
 vtkXYPlotActor profile
-  profile AddInput [ probe GetOutput ]
+  profile AddDataSetInputConnection [ probe GetOutputPort ]
   [ profile GetPositionCoordinate ] SetValue 0.05 0.05 0
   [ profile GetPosition2Coordinate ] SetValue 0.95 0.95 0
   profile SetXValuesToNormalizedArcLength
@@ -200,15 +200,14 @@ vtkAxesActor axes
 
 # Add the composite marker to the widget.  The widget
 # should be kept in non-interactive mode and the aspect
-# ratio of the render window taken into account explicitly, 
-# since the widget currently does not take this into 
+# ratio of the render window taken into account explicitly,
+# since the widget currently does not take this into
 # account in a multi-renderer environment.
-# 
+#
   vtkOrientationMarkerWidget marker
   marker SetOutlineColor 0.93 0.57 0.13
   marker SetOrientationMarker assembly
   marker SetViewport 0.0 0.0 0.15 0.3
-
 # Add the actors.
 #
   ren1 AddActor outlineActor
@@ -315,7 +314,7 @@ scale .top.slice \
 pack .top.slice \
         -fill x -expand f
 
-proc SetSlice {slice} {  
+proc SetSlice {slice} {
   ipw SetSliceIndex $slice
   UpdateIPW
   renWin Render
@@ -336,9 +335,13 @@ spline SetPlaneSource [ ipw GetPolyDataAlgorithm ]
 spline SetProjectionNormal 3
 spline On
 
-marker SetInteractor $iact
-marker SetEnabled 1
-marker InteractiveOff
+# The marker must be linked to the interactor after the $render_widget is mapped
+
+bind $render_widget <Map> [string map "%IA %iact" {
+  marker SetInteractor $iact
+  marker SetEnabled 1
+  marker InteractiveOff
+}]
 
 # Create an initial interesting view
 #
@@ -409,12 +412,12 @@ proc AlignXaxis { } {
   } else {
     set slice_number [ipw GetSliceIndex]
   }
-  .top.slice config -from $xMin -to $xMax 
+  .top.slice config -from $xMin -to $xMax
   .top.slice set $slice_number
   UpdateSplinePosition
   AlignCamera
   set interpmode $xmode
-  SetInterpolation 
+  SetInterpolation
 }
 
 proc AlignYaxis { } {
@@ -434,7 +437,7 @@ proc AlignYaxis { } {
   UpdateSplinePosition
   AlignCamera
   set interpmode $ymode
-  SetInterpolation 
+  SetInterpolation
 }
 
 proc AlignZaxis { } {
@@ -447,12 +450,12 @@ proc AlignZaxis { } {
   } else {
     set slice_number [ipw GetSliceIndex]
   }
-  .top.slice config -from $zMin -to $zMax 
+  .top.slice config -from $zMin -to $zMax
   .top.slice set $slice_number
   UpdateSplinePosition
   AlignCamera
   set interpmode $zmode
-  SetInterpolation 
+  SetInterpolation
 }
 
 proc UpdateSplinePosition { } {
@@ -480,11 +483,11 @@ proc SetInterpolation { } {
   set ori [ipw GetPlaneOrientation]
   if { $ori == 0 } {
     set xmode $interpmode
-  }  elseif  { $ori == 1 } {  
-    set ymode $interpmode  
+  }  elseif  { $ori == 1 } {
+    set ymode $interpmode
   } else {
     set zmode $interpmode
-  }  
+  }
   renWin Render
 }
 

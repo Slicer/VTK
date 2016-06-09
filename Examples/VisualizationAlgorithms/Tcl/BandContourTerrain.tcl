@@ -1,6 +1,6 @@
 # In this example we show the use of the vtkBandedPolyDataContourFilter.
 # This filter creates separate, constant colored bands for a range of scalar
-# values. Each band is bounded by two scalar values, and the cell data lying
+# values. Each band is bounded by two scalar values, and the cell data laying
 # within the value has the same cell scalar value.
 
 package require vtk
@@ -10,7 +10,7 @@ package require vtktesting
 # The lookup table is similar to that used by maps. Two hues are used: a
 # brown for land, and a blue for water. The value of the hue is changed to
 # give the effect of elevation.
-set Scale 5 
+set Scale 5
 vtkLookupTable lutWater
   lutWater SetNumberOfColors 10
   lutWater SetHueRange 0.58 0.58
@@ -30,7 +30,7 @@ vtkDEMReader demModel
   demModel SetFileName $VTK_DATA_ROOT/Data/SainteHelens.dem
   demModel Update
 
-# We shrink the terrain data down a bit to yield better performance for 
+# We shrink the terrain data down a bit to yield better performance for
 # this example.
 set shrinkFactor 4
 vtkImageShrink3D shrink
@@ -51,7 +51,7 @@ vtkWarpScalar warp
 
 # Create the contour bands.
 vtkBandedPolyDataContourFilter bcf
-  bcf SetInput [warp GetPolyDataOutput]
+  bcf SetInputConnection [warp GetOutputPort]
   eval bcf GenerateValues 15 [[demModel GetOutput] GetScalarRange]
   bcf SetScalarModeToIndex
   bcf GenerateContourEdgesOn
@@ -74,8 +74,8 @@ vtkLODActor demActor
 
 ## Create contour edges
 vtkPolyDataMapper edgeMapper
-  edgeMapper SetInput [bcf GetContourEdgesOutput]
-  edgeMapper SetResolveCoincidentTopologyToPolygonOffset 
+  edgeMapper SetInputConnection [bcf GetOutputPort]
+  edgeMapper SetResolveCoincidentTopologyToPolygonOffset
 vtkActor edgeActor
   edgeActor SetMapper edgeMapper
   [edgeActor GetProperty] SetColor 0 0 0
@@ -83,7 +83,7 @@ vtkActor edgeActor
 ## Test clipping
 # Create the contour bands.
 vtkBandedPolyDataContourFilter bcf2
-  bcf2 SetInput [warp GetPolyDataOutput]
+  bcf2 SetInputConnection [warp GetOutputPort]
   bcf2 ClippingOn
   eval bcf2 GenerateValues 10 1000 2000
   bcf2 SetScalarModeToValue
@@ -131,7 +131,7 @@ vtkCamera cam
 ren1 SetActiveCamera cam
 ren1 ResetCamera
 cam Zoom 2
- 
+
 iren AddObserver UserEvent {wm deiconify .vtkInteract}
 iren SetDesiredUpdateRate 1
 
@@ -143,3 +143,4 @@ renWin AddObserver AbortCheckEvent {TkCheckAbort}
 renWin Render
 
 wm withdraw .
+iren Start

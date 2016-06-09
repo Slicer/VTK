@@ -15,9 +15,10 @@
 #if !defined(AFX_VTKMFCVIEW_H__5D36A981_8081_11D2_985E_00A0CC243C06__INCLUDED_)
 #define AFX_VTKMFCVIEW_H__5D36A981_8081_11D2_985E_00A0CC243C06__INCLUDED_
 
-#if _MSC_VER > 1000
+#ifdef _MSC_VER
 #pragma once
-#endif // _MSC_VER > 1000
+#endif
+
 // vtkMFCView.h : header file
 //
 #define vtkMFCSetObjectMacro(name,type) \
@@ -29,7 +30,7 @@ void Set##name (type* _arg) \
     this->name = _arg; \
     if (this->name != NULL) { this->name->Register(NULL); } \
     } \
-  } 
+  }
 
 /////////////////////////////////////////////////////////////////////////////
 // vtkMFCView view
@@ -42,7 +43,7 @@ protected:
   vtkMFCView();           // protected constructor used by dynamic creation
   DECLARE_DYNCREATE(vtkMFCView)
     int PrintDPI;
-  
+
 // Attributes
 public:
 
@@ -52,10 +53,10 @@ public:
   int  GetPrintDPI() {return this->PrintDPI;};
   vtkMFCDocument *GetDocument() {return (vtkMFCDocument *)m_pDocument;};
   virtual vtkWindow *GetVTKWindow() {return NULL;};
-  virtual void SetupMemoryRendering(int x, int y, HDC prn) {};
-  virtual void ResumeScreenRendering() {};
+  virtual void SetupMemoryRendering(int x, int y, HDC prn) {}
+  virtual void ResumeScreenRendering() {}
   virtual unsigned char *GetMemoryData() {return NULL;};
-  
+
 // Overrides
   // ClassWizard generated virtual function overrides
   //{{AFX_VIRTUAL(vtkMFCView)
@@ -64,7 +65,7 @@ protected:
   virtual BOOL PreCreateWindow(CREATESTRUCT& cs);
   virtual BOOL OnPreparePrinting(CPrintInfo* pInfo);
   //}}AFX_VIRTUAL
-  
+
 // Implementation
 protected:
   virtual ~vtkMFCView();
@@ -72,7 +73,7 @@ protected:
   virtual void AssertValid() const;
   virtual void Dump(CDumpContext& dc) const;
 #endif
-  
+
   // Generated message map functions
 protected:
   //{{AFX_MSG(vtkMFCView)

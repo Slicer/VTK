@@ -45,7 +45,7 @@ elevation.SetScalarRange(lo, hi)
 elevation.ReleaseDataFlagOn()
 
 normals = vtk.vtkPolyDataNormals()
-normals.SetInput(elevation.GetPolyDataOutput())
+normals.SetInputConnection(elevation.GetOutputPort())
 normals.SetFeatureAngle(60)
 normals.ConsistencyOff()
 normals.SplittingOff()
@@ -87,7 +87,7 @@ sphereWidget.HandleVisibilityOn()
 def MoveLight(obj, event):
     global light
     light.SetPosition(obj.GetHandlePosition())
- 
+
 sphereWidget.AddObserver("InteractionEvent", MoveLight)
 
 # Add the actors to the renderer, set the background and size

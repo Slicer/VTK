@@ -18,7 +18,7 @@ public:
   QCache<qint64, vtkSmartPointer<vtkImageData> > mImageCache;
 };
 
-QVTKPaintEngine::QVTKPaintEngine() 
+QVTKPaintEngine::QVTKPaintEngine()
     : QPaintEngine(QPaintEngine::PaintOutsidePaintEvent |
                    QPaintEngine::AlphaBlend)
 {
@@ -46,7 +46,7 @@ bool QVTKPaintEngine::end()
 
 QPaintEngine::Type QVTKPaintEngine::type() const
 {
-  return QPaintEngine::User;
+  return QPaintEngine::OpenGL;
 }
 
 void QVTKPaintEngine::updateState(const QPaintEngineState&)
@@ -71,7 +71,7 @@ void QVTKPaintEngine::drawPixmap(const QRectF& r, const QPixmap& pm, const QRect
     }
 
   QImage img = pix.toImage().mirrored().rgbSwapped();
-  
+
   // blend the pixels from QImage into the vtkRenderWindow's buffer
   vtkRenderWindow* renWin = this->Widget->GetRenderWindow();
   renWin->SetRGBACharPixelData(ri.left(), this->Widget->height() - ri.top() - ri.height(),

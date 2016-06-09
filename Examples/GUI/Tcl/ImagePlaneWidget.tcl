@@ -1,16 +1,16 @@
 package require vtk
 package require vtkinteraction
 
-# This example demonstrates how to use the vtkImagePlaneWidget 
-# to probe a 3D image dataset with three orthogonal planes.  
+# This example demonstrates how to use the vtkImagePlaneWidget
+# to probe a 3D image dataset with three orthogonal planes.
 # Buttons are provided to:
 # a) capture the render window display to a tiff file
-# b) x,y,z buttons reset the widget to orthonormal 
+# b) x,y,z buttons reset the widget to orthonormal
 #    positioning, set the horizontal slider to move the
 #    associated widget along its normal, and set the
-#    camera to face the widget  
-# c) right clicking on x,y,z buttons pops up a menu to set 
-#    the associated widget's reslice interpolation mode 
+#    camera to face the widget
+# c) right clicking on x,y,z buttons pops up a menu to set
+#    the associated widget's reslice interpolation mode
 #
 
 # Start by loading some data.
@@ -23,7 +23,7 @@ vtkVolume16Reader v16
   v16 SetDataSpacing 3.2 3.2 1.5
   v16 Update
 
-scan [[v16 GetOutput] GetWholeExtent] "%d %d %d %d %d %d" \
+scan [[v16 GetExecutive] GetWholeExtent [v16 GetOutputInformation 0]] "%d %d %d %d %d %d" \
         xMin xMax yMin yMax zMin zMax
 
 set spacing [[v16 GetOutput] GetSpacing]
@@ -57,17 +57,17 @@ vtkCellPicker picker
 #
 vtkImagePlaneWidget planeWidgetX
   planeWidgetX DisplayTextOn
-  planeWidgetX SetInput [v16 GetOutput]
+  planeWidgetX SetInputConnection [v16 GetOutputPort]
   planeWidgetX SetPlaneOrientationToXAxes
   planeWidgetX SetSliceIndex 32
   planeWidgetX SetPicker picker
   planeWidgetX SetKeyPressActivationValue "x"
   set prop1 [planeWidgetX GetPlaneProperty]
-  $prop1 SetColor 1 0 0    
+  $prop1 SetColor 1 0 0
 
 vtkImagePlaneWidget planeWidgetY
   planeWidgetY DisplayTextOn
-  planeWidgetY SetInput [v16 GetOutput]
+  planeWidgetY SetInputConnection [v16 GetOutputPort]
   planeWidgetY SetPlaneOrientationToYAxes
   planeWidgetY SetSliceIndex 32
   planeWidgetY SetPicker picker
@@ -82,7 +82,7 @@ vtkImagePlaneWidget planeWidgetY
 #
 vtkImagePlaneWidget planeWidgetZ
   planeWidgetZ DisplayTextOn
-  planeWidgetZ SetInput [v16 GetOutput]
+  planeWidgetZ SetInputConnection [v16 GetOutputPort]
   planeWidgetZ SetPlaneOrientationToZAxes
   planeWidgetZ SetSliceIndex 46
   planeWidgetZ SetPicker picker
@@ -175,8 +175,8 @@ proc configMenu { } {
   } else {
     set mode_widget planeWidgetZ
   }
-  set mode [$mode_widget GetResliceInterpolate]    
-  $popm entryconfigure $last_btn -variable mode   
+  set mode [$mode_widget GetResliceInterpolate]
+  $popm entryconfigure $last_btn -variable mode
 }
 
 pack $quit_button $capture_button $x_button $y_button $z_button \
@@ -218,7 +218,7 @@ pack .top.slice \
         -fill x -expand f
 
 proc SetSlice {slice} {
-  global current_widget 
+  global current_widget
   $current_widget SetSliceIndex $slice
   ren1 ResetCameraClippingRange
   renWin Render
@@ -287,7 +287,7 @@ proc AlignCamera { } {
   $camera SetFocalPoint $cx $cy $cz
   $camera SetPosition $px $py $pz
   $camera OrthogonalizeViewUp
-  ren1 ResetCameraClippingRange 
+  ren1 ResetCameraClippingRange
   renWin Render
 }
 
@@ -323,7 +323,7 @@ proc AlignXaxis { } {
     set slice_number [planeWidgetX GetSliceIndex]
   }
   set current_widget planeWidgetX
-  .top.slice config -from $xMin -to $xMax 
+  .top.slice config -from $xMin -to $xMax
   .top.slice set $slice_number
   AlignCamera
 }
@@ -355,7 +355,7 @@ proc AlignZaxis { } {
     set slice_number [planeWidgetZ GetSliceIndex]
   }
   set current_widget planeWidgetZ
-  .top.slice config -from $zMin -to $zMax 
+  .top.slice config -from $zMin -to $zMax
   .top.slice set $slice_number
   AlignCamera
 }
@@ -364,7 +364,7 @@ proc AlignZaxis { } {
 # to the corresponding popup menu choice
 #
 proc SetInterpolation { } {
-  global mode_widget mode 
+  global mode_widget mode
   if { $mode == 0 } {
     $mode_widget TextureInterpolateOff
   } else {
@@ -376,22 +376,22 @@ proc SetInterpolation { } {
 
 proc WindowLevelXCallback {} {
   set w [planeWidgetX GetWindow]
-  set l [planeWidgetX GetLevel]  
-  planeWidgetY SetWindowLevel $w $l 1 
+  set l [planeWidgetX GetLevel]
+  planeWidgetY SetWindowLevel $w $l 1
   planeWidgetZ SetWindowLevel $w $l 1
 }
 
 proc WindowLevelYCallback {} {
   set w [planeWidgetY GetWindow]
-  set l [planeWidgetY GetLevel]  
-  planeWidgetX SetWindowLevel $w $l 1 
+  set l [planeWidgetY GetLevel]
+  planeWidgetX SetWindowLevel $w $l 1
   planeWidgetZ SetWindowLevel $w $l 1
 }
 
 proc WindowLevelZCallback {} {
   set w [planeWidgetZ GetWindow]
-  set l [planeWidgetZ GetLevel]  
-  planeWidgetX SetWindowLevel $w $l 1 
+  set l [planeWidgetZ GetLevel]
+  planeWidgetX SetWindowLevel $w $l 1
   planeWidgetY SetWindowLevel $w $l 1
 }
 

@@ -42,7 +42,7 @@
   vtkSmartPointer<type> name = vtkSmartPointer<type>::New()
 
 // Constructor
-StatsView::StatsView() 
+StatsView::StatsView()
 {
   this->ui = new Ui_StatsView;
   this->ui->setupUi(this);
@@ -52,7 +52,7 @@ StatsView::StatsView()
   this->TableView2 = vtkSmartPointer<vtkQtTableView>::New();
   this->TableView3 = vtkSmartPointer<vtkQtTableView>::New();
   this->TableView4 = vtkSmartPointer<vtkQtTableView>::New();
-  
+
   // Set widgets for the tree and table views
   this->ui->tableFrame1->layout()->addWidget(this->TableView1->GetWidget());
   this->ui->tableFrame2->layout()->addWidget(this->TableView2->GetWidget());
@@ -73,7 +73,7 @@ StatsView::~StatsView()
 {
 }
 
-// Action to be taken upon graph file open 
+// Action to be taken upon graph file open
 void StatsView::slotOpenSQLiteDB()
 {
   // Browse for and open the file
@@ -81,20 +81,20 @@ void StatsView::slotOpenSQLiteDB()
 
   // Open the text data file
   QString fileName = QFileDialog::getOpenFileName(
-    this, 
-    "Select the SQLite database file", 
+    this,
+    "Select the SQLite database file",
     QDir::homePath(),
     "SQLite Files (*.db);;All Files (*.*)");
-    
+
   if (fileName.isNull())
     {
     cerr << "Could not open file" << endl;
     return;
     }
-    
+
   // Create SQLite reader
   QString fullName = "sqlite://" + fileName;
-  vtkSQLiteDatabase* db = vtkSQLiteDatabase::SafeDownCast( vtkSQLDatabase::CreateFromURL( fullName.toAscii() ) );
+  vtkSQLiteDatabase* db = vtkSQLiteDatabase::SafeDownCast( vtkSQLDatabase::CreateFromURL( fullName.toLatin1() ) );
   bool status = db->Open("");
   if ( ! status )
     {
@@ -106,7 +106,7 @@ void StatsView::slotOpenSQLiteDB()
   vtkSQLQuery* query = db->GetQueryInstance();
   query->SetQuery( "SELECT * from main_tbl" );
   this->RowQueryToTable->SetQuery( query );
-    
+
   // Calculate descriptive statistics
   VTK_CREATE(vtkDescriptiveStatistics,descriptive);
   descriptive->SetInputConnection( 0, this->RowQueryToTable->GetOutputPort() );
@@ -139,22 +139,22 @@ void StatsView::slotOpenSQLiteDB()
 
   // Assign tables to table views
 
-  // FIXME: we should not have to make a shallow copy of the ouput
+  // FIXME: we should not have to make a shallow copy of the output
   VTK_CREATE(vtkTable,descriptiveC);
   descriptiveC->ShallowCopy( descriptive->GetOutput( 1 ) );
   this->TableView1->SetRepresentationFromInput( descriptiveC );
 
-  // FIXME: we should not have to make a shallow copy of the ouput
+  // FIXME: we should not have to make a shallow copy of the output
   VTK_CREATE(vtkTable,order1C);
   order1C->ShallowCopy( order1->GetOutput( 1 ) );
   this->TableView2->SetRepresentationFromInput( order1C );
 
-  // FIXME: we should not have to make a shallow copy of the ouput
+  // FIXME: we should not have to make a shallow copy of the output
   VTK_CREATE(vtkTable,order2C);
   order2C->ShallowCopy( order2->GetOutput( 1 ) );
   this->TableView3->SetRepresentationFromInput( order2C );
 
-  // FIXME: we should not have to make a shallow copy of the ouput
+  // FIXME: we should not have to make a shallow copy of the output
   VTK_CREATE(vtkTable,correlativeC);
   correlativeC->ShallowCopy( correlative->GetOutput( 0 ) );
   this->TableView4->SetRepresentationFromInput( correlativeC );
@@ -165,7 +165,7 @@ void StatsView::slotOpenSQLiteDB()
   this->TableView3->Update();
   this->TableView4->Update();
 
-  // Clean up 
+  // Clean up
   query->Delete();
   db->Delete();
 }

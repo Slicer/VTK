@@ -13,11 +13,11 @@ sphereMapper.GlobalImmediateModeRenderingOn()
 sphereActor = vtk.vtkLODActor()
 sphereActor.SetMapper(sphereMapper)
 
-# Create a scaled text actor. 
+# Create a scaled text actor.
 # Set the text, font, justification, and properties (bold, italics,
 # etc.).
 textActor = vtk.vtkTextActor()
-textActor.ScaledTextOn()
+textActor.SetTextScaleModeToProp()
 textActor.SetDisplayPosition(90, 50)
 textActor.SetInput("This is a sphere")
 

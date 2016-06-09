@@ -1,423 +1,465 @@
-# this file is used directly from VTK/CMakeLists.txt, not from VTK/Wrapping/CMakeLists.txt
+find_package(Java REQUIRED)
+find_package(JNI REQUIRED)
 
-IF(JAVA_COMPILE)
-  SET(VTK_JAVA_DEPENDENCIES "")
-  INCLUDE(${VTK_BINARY_DIR}/Common/JavaDependencies.cmake OPTIONAL)
-  INCLUDE(${VTK_BINARY_DIR}/Filtering/JavaDependencies.cmake OPTIONAL)
-  INCLUDE(${VTK_BINARY_DIR}/IO/JavaDependencies.cmake OPTIONAL)
-  INCLUDE(${VTK_BINARY_DIR}/Graphics/JavaDependencies.cmake OPTIONAL)
-  INCLUDE(${VTK_BINARY_DIR}/GenericFiltering/JavaDependencies.cmake OPTIONAL)
-  INCLUDE(${VTK_BINARY_DIR}/Imaging/JavaDependencies.cmake OPTIONAL)
-  IF (VTK_USE_RENDERING)
-    INCLUDE(${VTK_BINARY_DIR}/Rendering/JavaDependencies.cmake OPTIONAL)
-    INCLUDE(${VTK_BINARY_DIR}/VolumeRendering/JavaDependencies.cmake OPTIONAL)
-    INCLUDE(${VTK_BINARY_DIR}/Hybrid/JavaDependencies.cmake OPTIONAL)
-    INCLUDE(${VTK_BINARY_DIR}/Widgets/JavaDependencies.cmake OPTIONAL)
-  ENDIF(VTK_USE_RENDERING)
-  IF (VTK_USE_PARALLEL)
-    INCLUDE(${VTK_BINARY_DIR}/Parallel/JavaDependencies.cmake OPTIONAL)
-  ENDIF(VTK_USE_PARALLEL)
-  IF (VTK_USE_GEOVIS)
-    INCLUDE(${VTK_BINARY_DIR}/Geovis/JavaDependencies.cmake OPTIONAL)
-  ENDIF(VTK_USE_GEOVIS)
-  IF (VTK_USE_INFOVIS)
-    INCLUDE(${VTK_BINARY_DIR}/Infovis/JavaDependencies.cmake OPTIONAL)
-  ENDIF(VTK_USE_INFOVIS)
-  IF (VTK_USE_VIEWS)
-    INCLUDE(${VTK_BINARY_DIR}/Views/JavaDependencies.cmake OPTIONAL)
-  ENDIF(VTK_USE_VIEWS)
+include_directories(${JAVA_INCLUDE_PATH} ${JAVA_INCLUDE_PATH2})
 
-  SET(VTK_JAVA_NEW_STYLE 0)
-  IF(COMMAND VTK_GENERATE_JAVA_DEPENDENCIES)
-    IF(VTK_JAVA_DEPENDENCIES)
-      SET(VTK_JAVA_NEW_STYLE 1)
-    ENDIF(VTK_JAVA_DEPENDENCIES)
-  ENDIF(COMMAND VTK_GENERATE_JAVA_DEPENDENCIES)
+# Add the option to package VTK for custom Java packaging
+option(VTK_JAVA_INSTALL "Use the Java rules to build the native libraries." OFF)
+option(VTK_JAVA_CLEANUP_INSTALL "Should java packaging cleanup install directory." OFF)
+mark_as_advanced(VTK_JAVA_CLEANUP_INSTALL)
 
-  IF(NOT VTK_JAR_PATH)
-    SET(VTK_JAR_PATH "${LIBRARY_OUTPUT_PATH}")
-  ENDIF(NOT VTK_JAR_PATH)
+if(VTK_JAVA_INSTALL)
 
-  IF(VTK_JAVA_NEW_STYLE)
-    SET(CLASS_FILES ${VTK_JAVA_DEPENDENCIES})
-    STRING(REGEX REPLACE "\\.java" ".class;" CLASS_FILES ${VTK_JAVA_DEPENDENCIES})
-    ADD_CUSTOM_TARGET(VTKJava ALL)
-    ADD_CUSTOM_TARGET(VTKJavaJar ALL)
-    ADD_CUSTOM_TARGET(VTKJavaSampleJar ALL)
+  # Make sure we embed the runtime libraries when packaging the Java binaries
+  if(WIN32)
+    # install system runtimes.
+    set(CMAKE_INSTALL_SYSTEM_RUNTIME_DESTINATION "bin")
+    include(InstallRequiredSystemLibraries)
+  endif()
 
-    SET(KITS Common Filtering IO Graphics GenericFiltering Imaging)
-    IF (VTK_USE_RENDERING)
-      SET(KITS ${KITS} Rendering)
-      SET(KITS ${KITS} VolumeRendering)
-      SET(KITS ${KITS} Hybrid)
-      SET(KITS ${KITS} Widgets)
-    ENDIF(VTK_USE_RENDERING)
-    IF (VTK_USE_PARALLEL)
-      SET(KITS ${KITS} Parallel)
-    ENDIF(VTK_USE_PARALLEL)
-    IF (VTK_USE_GEOVIS)
-      SET(KITS ${KITS} Geovis)
-    ENDIF(VTK_USE_GEOVIS)
-    IF (VTK_USE_INFOVIS)
-      SET(KITS ${KITS} Infovis)
-    ENDIF(VTK_USE_INFOVIS)
-    IF (VTK_USE_VIEWS)
-      SET(KITS ${KITS} Views)
-    ENDIF(VTK_USE_VIEWS)
+  set(VTK_CUSTOM_LIBRARY_SUFFIX "" CACHE STRING "" FORCE)
+  mark_as_advanced(VTK_CUSTOM_LIBRARY_SUFFIX)
+  if(APPLE)
+     set(CMAKE_INSTALL_NAME_DIR @loader_path CACHE STRING "" FORCE)
+     mark_as_advanced(CMAKE_INSTALL_NAME_DIR)
+  endif()
+  if(NOT MAVEN_LOCAL_NATIVE_NAME)
+    set(MAVEN_LOCAL_NATIVE_NAME "${CMAKE_SYSTEM_NAME}-${CMAKE_SYSTEM_PROCESSOR}" CACHE STRING "")
+  endif()
+  if(NOT MAVEN_NATIVE_ARTIFACTS)
+    set(MAVEN_NATIVE_ARTIFACTS "${MAVEN_LOCAL_NATIVE_NAME}" CACHE STRING "")
+  endif()
+  if(NOT MAVEN_LOCAL_REPOSITORY)
+    set(MAVEN_LOCAL_REPOSITORY "\${user.home}/vtk-maven-repos" CACHE STRING "")
+  endif()
+  if(NOT MAVEN_VTK_GROUP_ID)
+    set(MAVEN_VTK_GROUP_ID "kitware.community" CACHE STRING "")
+  endif()
+  mark_as_advanced(MAVEN_LOCAL_REPOSITORY MAVEN_NATIVE_ARTIFACTS MAVEN_LOCAL_NATIVE_NAME MAVEN_VTK_GROUP_ID)
+  set(MAVEN_DEPENDENCY_XML)
+endif()
 
-    # Some platforms have libjvm in a subdirectory from
-    # the rest of the java libraries and are missing the symlink.
-    IF(JAVA_AWT_LIBRARY)
-      FOREACH(__java_library ${JAVA_AWT_LIBRARY})
-        GET_FILENAME_COMPONENT(JAVA_LIB_DIR ${__java_library} PATH)
-        IF(EXISTS ${JAVA_LIB_DIR}/xawt)
-          LINK_DIRECTORIES(${JAVA_LIB_DIR}/xawt)
-        ENDIF(EXISTS ${JAVA_LIB_DIR}/xawt)
-        IF(EXISTS ${JAVA_LIB_DIR}/client)
-          LINK_DIRECTORIES(${JAVA_LIB_DIR}/client)
-        ENDIF(EXISTS ${JAVA_LIB_DIR}/client)
-        IF(EXISTS ${JAVA_LIB_DIR}/server)
-          LINK_DIRECTORIES(${JAVA_LIB_DIR}/server)
-        ENDIF(EXISTS ${JAVA_LIB_DIR}/server)
-      ENDFOREACH(__java_library)
-    ENDIF(JAVA_AWT_LIBRARY)
-    SET(CMAKE_SKIP_RPATH 0)
-    ADD_EXECUTABLE(VTKJavaExecutable VTKJava.cxx)
-    SET(JAVA_LIBRARIES)
+# Add the option for build the SWT component to VTK.
+option(VTK_JAVA_SWT_COMPONENT "Should SWT component for Java be built (it requires Eclipse)?" OFF)
 
-    SET(VTK_BUILD_ALL_CONTENT "")
-    SET(VTK_BUILD_ALL_DEPENDS "")
+if(VTK_JAVA_SWT_COMPONENT)
+  find_package(SWT REQUIRED)
+endif()
 
-    FOREACH(kit ${KITS})
-      IF(APPLE)
-        SET(src ${VTK_JAR_PATH}/libvtk${kit}Java.dylib)
-        SET(tgt ${VTK_JAR_PATH}/libvtk${kit}Java.jnilib)
-        ADD_CUSTOM_COMMAND(OUTPUT ${tgt}
-                           COMMAND ln
-                           ARGS -sf ${src} ${tgt}
-                           DEPENDS ${src})
-        SET(JAVA_LIBRARIES ${JAVA_LIBRARIES} ${tgt})
-      ENDIF(APPLE)
-      TARGET_LINK_LIBRARIES(VTKJavaExecutable vtk${kit}Java)
-      SET(VTK_JAVA_DEPENDENCIES "")
-      ADD_CUSTOM_TARGET(VTKJava${kit} ALL)
-      SET(VTK_BUILD_ALL_CONTENT
-        "${VTK_BUILD_ALL_CONTENT}\n    vtk.vtkVTKJava${kit}Driver.Initialize(args);")
-      SET(VTK_BUILD_ALL_DEPENDS
-        ${VTK_BUILD_ALL_DEPENDS} 
-        ${VTK_BINARY_DIR}/java/vtk/vtkVTKJava${kit}Driver.java)
-      INCLUDE(${VTK_BINARY_DIR}/${kit}/JavaDependencies.cmake OPTIONAL)
-      VTK_GENERATE_JAVA_DEPENDENCIES(VTKJava${kit} ${VTK_JAVA_DEPENDENCIES})
-      #ADD_DEPENDENCIES(VTKJava${kit} VTKJavaExecutable)
-      #ADD_DEPENDENCIES(VTKJava${kit} vtk${kit}JavaJavaClasses)
-      #ADD_DEPENDENCIES(VTKJavaJar VTKJava${kit})
-      # Make sure all .java files are build before any .class files are built.
-      FOREACH(otherKit ${KITS})
-        ADD_DEPENDENCIES(VTKJava${kit} vtk${otherKit}JavaJavaClasses)
-      ENDFOREACH(otherKit)
-    ENDFOREACH(kit)
+# Add the option for build the JOGL component to VTK.
+set(JOGL_VERSION "2.0.2")
+option(VTK_JAVA_JOGL_COMPONENT "Need JOGL jar files" OFF)
 
-    CONFIGURE_FILE(${VTK_SOURCE_DIR}/Wrapping/Java/vtkBuildAllDriver.java.in
-      ${VTK_BINARY_DIR}/java/vtk/vtkBuildAllDriver.java)
-    ADD_CUSTOM_TARGET(VTKBuildAll ALL)
+if(VTK_JAVA_JOGL_COMPONENT)
+  set(MAVEN_REPO "$ENV{HOME}/.m2/repository")
+  find_file(JOGL_LIB jogl-all-${JOGL_VERSION}.jar PATHS ${MAVEN_REPO}/org/jogamp/jogl/jogl-all/${JOGL_VERSION} )
+  find_file(JOGL_GLUE gluegen-rt-${JOGL_VERSION}.jar PATHS ${MAVEN_REPO}/org/jogamp/gluegen/gluegen-rt/${JOGL_VERSION})
+  mark_as_advanced(JOGL_LIB JOGL_GLUE)
+  if(NOT JOGL_LIB)
+     message(ERROR "
+     CMake can not build VTK with VTK_JAVA_JOGL_COMPONENT ON if the JOGL jar file is not provided.
+     Please set the JOGL_LIB variable.
+     ")
+  endif()
+  if(NOT JOGL_GLUE)
+     message(ERROR "
+     CMake can not build VTK with VTK_JAVA_JOGL_COMPONENT ON if the GLUE jar file is not provided.
+     Please set the JOGL_GLUE variable.
+     ")
+  endif()
+endif()
 
-    CONFIGURE_FILE(${VTK_SOURCE_DIR}/Wrapping/Java/vtk/vtkSettings.java.in
-      ${VTK_BINARY_DIR}/java/vtk/vtkSettings.java)
+set(WrappingJava_SRCS
+  vtkJavaUtil.cxx
+  )
 
-    ADD_CUSTOM_COMMAND(
-      TARGET VTKBuildAll
-      OUTPUTS ${VTK_BINARY_DIR}/java/vtk/vtkBuildAllDriver.class
-      DEPENDS ${VTK_BUILD_ALL_DEPENDS}
-      SOURCE ${VTK_BINARY_DIR}/java/vtk/vtkBuildAllDriver.java
-      COMMAND ${JAVA_COMPILE}
-      ARGS -classpath ${VTK_JAVA_HOME}/.. -d ${VTK_JAVA_HOME}/.. 
-      ${VTK_BINARY_DIR}/java/vtk/vtkBuildAllDriver.java
-      )
+vtk_module_library(vtkWrappingJava ${WrappingJava_SRCS})
 
-    ADD_CUSTOM_COMMAND(
-      TARGET VTKBuildAll
-      SOURCE VTKBuildAll
-      DEPENDS ${VTK_BINARY_DIR}/java/vtk/vtkBuildAllDriver.class
-      )
+# javac runs out memory on Mac so increase heapsize
+if(APPLE)
+  set(JAVAC_OPTIONS -J-Xmx512m)
+endif()
 
-    ADD_DEPENDENCIES(VTKJavaJar VTKBuildAll)
+get_property(java_modules GLOBAL PROPERTY VTK_JAVA_WRAPPED)
+foreach(module IN LISTS java_modules)
+  if(NOT ${module}_EXCLUDE_FROM_WRAPPING)
+    include(${${module}_BINARY_DIR}/JavaDependencies.cmake OPTIONAL)
+    list(APPEND _MODULES_TO_WRAP ${module})
+  endif()
+endforeach()
 
-    # Make sure all the VTKJava${kit} projects build *before* VTKBuildAll.
-    # (All individual generated .java files should be compiled into .class
-    # files before compiling the "driver" sources...)
-    #
-    FOREACH(kit ${KITS})
-      ADD_DEPENDENCIES(VTKBuildAll VTKJava${kit})
-      ADD_DEPENDENCIES(VTKBuildAll vtk${kit}Java)
-    ENDFOREACH(kit)
+if(NOT VTK_JAR_PATH)
+  set(VTK_JAR_PATH "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}")
+endif()
 
-    ADD_DEPENDENCIES(VTKJavaFiltering VTKJavaCommon)
-    ADD_DEPENDENCIES(VTKJavaIO VTKJavaFiltering)
-    ADD_DEPENDENCIES(VTKJavaGraphics VTKJavaIO)
-    ADD_DEPENDENCIES(VTKJavaGenericFiltering VTKJavaGraphics)
-    ADD_DEPENDENCIES(VTKJavaImaging VTKJavaFiltering)
+set(VTK_JAVA_SOURCE_FILES ${VTK_JAVA_DEPENDENCIES})
+string(REGEX REPLACE "\\.java" ".class;" VTK_JAVA_CLASS_FILES ${VTK_JAVA_SOURCE_FILES})
 
-    SET(VTK_JAVA_DEPENDENCIES
-      CellType
-      vtkReferenceInformation
-      vtkJavaGarbageCollector
-      vtkJavaMemoryManager
-      vtkJavaMemoryManagerImpl
-      vtkNativeLibrary
-      vtkSettings
-      vtkJavaTesting
-      AxesActor
+# Setup custom targets
+if (BUILD_TESTING)
+  add_custom_target(VTKJavaTestClasses ALL DEPENDS ${VTK_BINARY_DIR}/java/javac_tests_stamp.txt)
+endif()
+add_custom_target(VTKJavaJar ALL DEPENDS ${VTK_JAR_PATH}/vtk.jar)
+add_custom_target(VTKJavaClasses ALL DEPENDS ${VTK_BINARY_DIR}/java/javac_stamp.txt)
+
+add_dependencies(VTKJavaJar VTKJavaClasses)
+if (BUILD_TESTING)
+  add_dependencies(VTKJavaTestClasses VTKJavaJar)
+endif()
+# Some platforms have libjvm in a subdirectory from
+# the rest of the java libraries and are missing the symlink.
+
+if(JAVA_AWT_LIBRARY)
+  foreach(__java_library ${JAVA_AWT_LIBRARY})
+    get_filename_component(JAVA_LIB_DIR ${__java_library} PATH)
+    if(EXISTS ${JAVA_LIB_DIR}/xawt)
+      link_directories(${JAVA_LIB_DIR}/xawt)
+    endif()
+    if(EXISTS ${JAVA_LIB_DIR}/client)
+       link_directories(${JAVA_LIB_DIR}/client)
+    endif()
+    if(EXISTS ${JAVA_LIB_DIR}/server)
+      link_directories(${JAVA_LIB_DIR}/server)
+    endif()
+  endforeach()
+endif()
+
+set(CMAKE_SKIP_RPATH 0)
+include_directories(${vtkCommonCore_SOURCE_DIR})
+include_directories(${vtkCommonCore_BINARY_DIR})
+add_executable(VTKJavaExecutable VTKJava.cxx)
+set(JAVA_LIBRARIES)
+
+foreach(module ${_MODULES_TO_WRAP})
+
+  string(REGEX REPLACE "^vtk" "" _module_no_prefix "${module}")
+
+  if(APPLE AND NOT VTK_JAVA_INSTALL)
+    set(src ${VTK_JAR_PATH}/libvtk${_module_no_prefix}Java.dylib)
+    set(tgt ${VTK_JAR_PATH}/libvtk${_module_no_prefix}Java.jnilib)
+    add_custom_command(OUTPUT ${tgt}
+                       COMMAND ln
+                       ARGS -sf ${src} ${tgt}
+                       DEPENDS ${src})
+    set(JAVA_LIBRARIES ${JAVA_LIBRARIES} ${tgt})
+  endif()
+
+  target_link_libraries(VTKJavaExecutable ${module}Java)
+
+  add_custom_target(VTKJava${_module_no_prefix} ALL)
+  add_dependencies(VTKJava${_module_no_prefix} VTKJavaExecutable)
+  add_dependencies(VTKJava${_module_no_prefix} ${module}JavaJavaClasses)
+  add_dependencies(VTKJavaJar VTKJava${_module_no_prefix})
+  # Make sure all .java files are build before any .class files are built.
+  foreach(otherModule ${_MODULES_TO_WRAP})
+    add_dependencies(VTKJava${_module_no_prefix} ${otherModule}JavaJavaClasses)
+  endforeach()
+
+  # Make sure all the VTKJava${kit} projects build *before* VTKJavaClasses.
+  add_dependencies(VTKJavaClasses VTKJava${_module_no_prefix})
+  add_dependencies(VTKJavaClasses ${module}Java)
+endforeach()
+
+# KITS is used in vtkSettings.java.in ( module name no prefix )
+string(REGEX REPLACE "vtk" "" KITS "${_MODULES_TO_WRAP}")
+configure_file(${VTK_SOURCE_DIR}/Wrapping/Java/vtk/vtkSettings.java.in
+               ${VTK_BINARY_DIR}/java/vtk/vtkSettings.java)
+
+# configure vtkNativeLibrary.java to enable loading of VTK module libraries
+set(VTK_JAVA_NATIVE_LIBRARIES)
+foreach(module ${VTK_MODULES_ALL})
+  if(NOT ${module}_EXCLUDE_FROM_WRAPPING)
+    string(TOUPPER ${module} _enum_name)
+    set(_enabled "false")
+    if(${${module}_ENABLED})
+      set(_enabled "true")
+    endif()
+    set(_enum_contr_call "    ${_enum_name}(\"${module}Java\", ${_enabled}),\n")
+    set(VTK_JAVA_NATIVE_LIBRARIES "${VTK_JAVA_NATIVE_LIBRARIES}${_enum_contr_call}")
+  endif()
+endforeach()
+
+# replace last , with ;
+string(REGEX REPLACE "^(.*),\n$" "\\1;\n" VTK_JAVA_NATIVE_LIBRARIES ${VTK_JAVA_NATIVE_LIBRARIES})
+
+configure_file(${VTK_SOURCE_DIR}/Wrapping/Java/vtk/vtkNativeLibrary.java.in
+               ${VTK_BINARY_DIR}/java/vtk/vtkNativeLibrary.java)
+
+# Add to class list so classes get cleaned up
+list(APPEND VTK_JAVA_CLASS_FILES ${VTK_BINARY_DIR}/java/vtk/vtkSettings.class)
+
+set(VTK_JAVA_DEPENDENCIES
+  CellType
+  vtkReferenceInformation
+  vtkJavaGarbageCollector
+  vtkJavaMemoryManager
+  vtkJavaMemoryManagerImpl
+  vtkNativeLibrary
+  vtkSettings
+  )
+
+set(VTK_JAVA_SAMPLE_DEPENDENCIES)
+
+if(vtkRenderingCore_ENABLED)
+  if (BUILD_TESTING)
+  set(VTK_JAVA_DEPENDENCIES ${VTK_JAVA_DEPENDENCIES}
+    vtkJavaTesting)
+  endif()
+  set(VTK_JAVA_DEPENDENCIES ${VTK_JAVA_DEPENDENCIES}
+    AxesActor
+    vtkRenderWindowPanel
     )
-    SET(VTK_JAVA_SAMPLE_DEPENDENCIES)
-    IF(VTK_USE_RENDERING)
-      SET(VTK_JAVA_DEPENDENCIES ${VTK_JAVA_DEPENDENCIES}
-        vtkCanvas
-        vtkPanel
-        vtkRenderWindowPanel
-      )
-      SET(VTK_JAVA_SAMPLE_DEPENDENCIES ${VTK_JAVA_SAMPLE_DEPENDENCIES}
-        ImagePlaneWidget
-        InternalFrames
-        Demo
-        SimpleVTK
-        VTKCanvas
-        ReleaseVtkPanel
-      )
-      ADD_DEPENDENCIES(VTKJavaRendering VTKJavaGraphics VTKJavaImaging)
-      ADD_DEPENDENCIES(VTKJavaVolumeRendering VTKJavaRendering)
-      ADD_DEPENDENCIES(VTKJavaHybrid VTKJavaRendering)
-      ADD_DEPENDENCIES(VTKJavaWidgets VTKJavaHybrid)
-    ENDIF(VTK_USE_RENDERING)
-    IF(VTK_USE_PARALLEL)
-      ADD_DEPENDENCIES(VTKJavaParallel VTKJavaRendering)
-    ENDIF(VTK_USE_PARALLEL)
-    IF(VTK_USE_GEOVIS)
-      ADD_DEPENDENCIES(VTKJavaGeovis VTKJavaWidgets)
-    ENDIF(VTK_USE_GEOVIS)
-    IF(VTK_USE_INFOVIS)
-      ADD_DEPENDENCIES(VTKJavaInfovis VTKJavaWidgets)
-    ENDIF(VTK_USE_INFOVIS)
-    IF(VTK_USE_VIEWS)
-      ADD_DEPENDENCIES(VTKJavaViews VTKJavaInfovis)
-    ENDIF(VTK_USE_VIEWS)
+endif()
 
-    FOREACH(jfile ${VTK_JAVA_DEPENDENCIES})
-      SET(src ${VTK_SOURCE_DIR}/Wrapping/Java/vtk/${jfile}.java)
-      SET(dst ${VTK_JAVA_HOME}/${jfile}.java)
-      SET(class ${VTK_JAVA_HOME}/${jfile}.class)
-      IF(jfile MATCHES "vtkSettings")
-      ELSE(jfile MATCHES "vtkSettings")
-        CONFIGURE_FILE(${src} ${dst} COPYONLY)
-      ENDIF(jfile MATCHES "vtkSettings")
+if(vtkInteractionWidgets_ENABLED)
+  set(VTK_JAVA_DEPENDENCIES ${VTK_JAVA_DEPENDENCIES}
+    vtkCanvas
+    )
+endif()
 
-      ADD_CUSTOM_COMMAND(
-        TARGET VTKJavaJar
-        SOURCE ${dst}
-        OUTPUTS ${class}
-        DEPENDS ${VTK_JAVA_HOME}/vtkPanel.java
-        COMMAND ${JAVA_COMPILE}
-        ARGS -classpath ${VTK_JAVA_HOME}/.. -d ${VTK_JAVA_HOME}/.. ${dst}
-        )
+if(vtkRenderingCore_ENABLED AND vtkIOImage_ENABLED)
+  set(VTK_JAVA_DEPENDENCIES ${VTK_JAVA_DEPENDENCIES}
+    vtkPanel
 
-      SET(CLASS_FILES ${CLASS_FILES} ${class})
-    ENDFOREACH(jfile)
-    ADD_DEPENDENCIES(VTKJava VTKJavaJar)
-    
-    FOREACH(jfile ${VTK_JAVA_SAMPLE_DEPENDENCIES})
-      SET(src ${VTK_SOURCE_DIR}/Wrapping/Java/vtk/sample/${jfile}.java)
-      SET(dst ${VTK_JAVA_HOME}/sample/${jfile}.java)
-      SET(class ${VTK_JAVA_HOME}/sample/${jfile}.class)
-      CONFIGURE_FILE(${src} ${dst} COPYONLY)
+    rendering/vtkAbstractComponent
+    rendering/vtkAbstractEventInterceptor
+    rendering/vtkComponent
+    rendering/vtkEventInterceptor
+    rendering/vtkInteractorForwarder
+    rendering/awt/vtkAwtComponent
+    rendering/awt/vtkInternalAwtComponent
+    rendering/awt/vtkPanelComponent
+    )
+  if(VTK_JAVA_SWT_COMPONENT)
+    set(VTK_JAVA_DEPENDENCIES ${VTK_JAVA_DEPENDENCIES}
+      rendering/swt/vtkSwtComponent
+      rendering/swt/vtkInternalSwtComponent
+      rendering/swt/vtkSwtInteractorForwarderDecorator
+    )
+  endif()
+  if(VTK_JAVA_JOGL_COMPONENT)
+    set(VTK_JAVA_DEPENDENCIES ${VTK_JAVA_DEPENDENCIES}
+      rendering/jogl/vtkAbstractJoglComponent
+      rendering/jogl/vtkJoglCanvasComponent
+      rendering/jogl/vtkJoglPanelComponent
+      sample/rendering/JoglConeRendering
+    )
+  endif()
+  set(VTK_JAVA_SAMPLE_DEPENDENCIES ${VTK_JAVA_SAMPLE_DEPENDENCIES}
+    InternalFrames
+    Demo
+    SimpleVTK
+    VTKCanvas
+    ReleaseVtkPanel
+    rendering/AwtConeRendering
+    rendering/annotation/LabeledCubeAxesActor
+    )
+  if(VTK_JAVA_SWT_COMPONENT)
+    set(VTK_JAVA_SAMPLE_DEPENDENCIES ${VTK_JAVA_SAMPLE_DEPENDENCIES}
+      rendering/SwtConeRendering
+    )
+  endif()
+endif()
 
-      ADD_CUSTOM_COMMAND(
-        TARGET VTKJavaSampleJar
-        SOURCE ${dst}
-        OUTPUTS ${class}
-        DEPENDS ${VTK_JAVA_HOME}/vtkPanel.class
-        COMMAND ${JAVA_COMPILE}
-        ARGS -classpath ${VTK_JAVA_HOME}/.. -d ${VTK_JAVA_HOME}/.. ${dst}
-        )
+if(vtkFiltersModeling_ENABLED AND vtkIOImage_ENABLED)
+  set(VTK_JAVA_SAMPLE_DEPENDENCIES ${VTK_JAVA_SAMPLE_DEPENDENCIES}
+    ImagePlaneWidget
+    )
+endif()
 
-      SET(CLASS_FILES ${CLASS_FILES} ${class})
-    ENDFOREACH(jfile)
-    ADD_DEPENDENCIES(VTKJava VTKJavaSampleJar)
+# Copy over the sample Java files
+foreach(jfile ${VTK_JAVA_SAMPLE_DEPENDENCIES})
+  set(src ${VTK_SOURCE_DIR}/Wrapping/Java/vtk/sample/${jfile}.java)
+  set(dst ${VTK_JAVA_HOME}/sample/${jfile}.java)
+  list(APPEND VTK_JAVA_SOURCE_FILES ${dst})
+  set(class ${VTK_JAVA_HOME}/sample/${jfile}.class)
+  # Add to class list so classes get cleaned up
+  list(APPEND VTK_JAVA_CLASS_FILES ${class})
+  configure_file(${src} ${dst} COPYONLY)
+endforeach()
 
-    ADD_CUSTOM_COMMAND(SOURCE ${VTK_JAVA_HOME}/vtkObject.class
-      COMMAND ${JAVA_ARCHIVE}
-      ARGS -cvf  "${VTK_JAR_PATH}/vtk.jar"
-      -C ${VTK_BINARY_DIR}/java
-      vtk
-      TARGET VTKJavaJar
-      DEPENDS ${CLASS_FILES} ${JAVA_LIBRARIES}
-      OUTPUTS ${VTK_JAR_PATH}/vtk.jar
-      COMMENT "Java Archive")
+# Copy over the handcrafted Java classes
+foreach(jfile ${VTK_JAVA_DEPENDENCIES})
+  set(src ${VTK_SOURCE_DIR}/Wrapping/Java/vtk/${jfile}.java)
+  set(dst ${VTK_JAVA_HOME}/${jfile}.java)
+  list(APPEND VTK_JAVA_SOURCE_FILES ${dst})
+  set(class ${VTK_JAVA_HOME}/${jfile}.class)
+  # Add to class list so classes get cleaned up
+  list(APPEND VTK_JAVA_CLASS_FILES ${class})
+  if(jfile MATCHES "vtkSettings" OR jfile MATCHES "vtkNativeLibrary")
+  else()
+    configure_file(${src} ${dst} COPYONLY)
+  endif()
+endforeach()
 
-    ADD_CUSTOM_COMMAND(SOURCE VTKJavaJar
-      TARGET VTKJavaJar
-      DEPENDS ${VTK_JAR_PATH}/vtk.jar)
+if(WIN32)
+  set(SEPARATOR "\\;")
+else()
+  set(SEPARATOR ":")
+endif()
 
-    IF(BUILD_TESTING)
-      IF(WIN32)
-        SET(SEPARATOR "\;")
-      ELSE(WIN32)
-        SET(SEPARATOR ":")
-      ENDIF(WIN32)
+if(VTK_JAVA_SWT_COMPONENT)
+  set(SWT_FILES "${VTK_BINARY_DIR}/java/vtk/rendering/swt/*.java")
+endif()
 
-      FOREACH(jfile
-          Regression
-          ConcurrencyGC
-          JavaDelete
-          ManualGC
-          JavaGCAndDelete)
-        ADD_CUSTOM_COMMAND(
-          SOURCE ${VTK_SOURCE_DIR}/Wrapping/Java/vtk/test/${jfile}.java
-          COMMAND ${JAVA_COMPILE}
-          ARGS -classpath ${VTK_JAR_PATH}/vtk.jar${SEPARATOR}${VTK_BINARY_DIR}/Wrapping/Java
-          -sourcepath ${VTK_SOURCE_DIR}/Wrapping/Java
-          -d ${VTK_BINARY_DIR}/Wrapping/Java
-          ${VTK_SOURCE_DIR}/Wrapping/Java/vtk/test/${jfile}.java
-          TARGET VTKJava
-          DEPENDS ${VTK_JAR_PATH}/vtk.jar
-          OUTPUTS ${VTK_BINARY_DIR}/Wrapping/Java/vtk/test/${jfile}.class
-          COMMENT "Java Test")
-        SET(JAVA_TESTS ${JAVA_TESTS} ${VTK_BINARY_DIR}/Wrapping/Java/vtk/test/${jfile}.class)
-      ENDFOREACH(jfile)
-      
-      # Since vtkTesting is within vtkRendering we need blockers
-      IF(VTK_USE_RENDERING AND VTK_USE_DISPLAY)
+if(VTK_JAVA_JOGL_COMPONENT)
+  set(JOGL_FILES "${VTK_BINARY_DIR}/java/vtk/rendering/jogl/*.java" "${VTK_BINARY_DIR}/java/vtk/sample/rendering/JoglConeRendering.java")
+endif()
 
-        # If JAVA_DATAMODEL_FLAG is set, pass it as first argument. Otherwise, it's empty.
-        # For example, use "-d64" to force 64-bit java jvm.
-        #
-        ADD_TEST(JavaRegression ${JAVA_RUNTIME} ${VTK_TEST_JAVA_DATAMODEL_FLAG} 
-          -classpath ${VTK_JAR_PATH}/vtk.jar${SEPARATOR}${VTK_BINARY_DIR}/Wrapping/Java
-          vtk.test.Regression -D ${VTK_DATA_ROOT}
-          -V Baseline/Graphics/Cone.png 
-          -T ${VTK_BINARY_DIR}/Testing/Temporary)
-      ENDIF(VTK_USE_RENDERING AND VTK_USE_DISPLAY)
-      
-      ADD_TEST(JavaGCRegression ${JAVA_RUNTIME} ${VTK_TEST_JAVA_DATAMODEL_FLAG} 
-          -classpath ${VTK_JAR_PATH}/vtk.jar${SEPARATOR}${VTK_BINARY_DIR}/Wrapping/Java
-          vtk.test.ConcurrencyGC
-          -T ${VTK_BINARY_DIR}/Testing/Temporary)
-          
-      ADD_TEST(JavaDeleteRegression ${JAVA_RUNTIME} ${VTK_TEST_JAVA_DATAMODEL_FLAG} 
-          -classpath ${VTK_JAR_PATH}/vtk.jar${SEPARATOR}${VTK_BINARY_DIR}/Wrapping/Java
-          vtk.test.JavaDelete
-          -T ${VTK_BINARY_DIR}/Testing/Temporary)
-          
-      ADD_TEST(JavaManualGC ${JAVA_RUNTIME} ${VTK_TEST_JAVA_DATAMODEL_FLAG} 
-          -classpath ${VTK_JAR_PATH}/vtk.jar${SEPARATOR}${VTK_BINARY_DIR}/Wrapping/Java
-          vtk.test.ManualGC
-          -T ${VTK_BINARY_DIR}/Testing/Temporary)
-          
-      ADD_TEST(JavaDeleteAndGC ${JAVA_RUNTIME} ${VTK_TEST_JAVA_DATAMODEL_FLAG} 
-          -classpath ${VTK_JAR_PATH}/vtk.jar${SEPARATOR}${VTK_BINARY_DIR}/Wrapping/Java
-          vtk.test.JavaGCAndDelete
-          -T ${VTK_BINARY_DIR}/Testing/Temporary)
-          
-    ENDIF(BUILD_TESTING)
+# Handle Java class path
+set(JAVA_COMPILATION_CLASSPATH "${VTK_JAVA_HOME}/..")
+if(ECLIPSE_SWT_LIBRARIES)
+    set(JAVA_COMPILATION_CLASSPATH "${JAVA_COMPILATION_CLASSPATH}${SEPARATOR}${ECLIPSE_SWT_LIBRARIES}")
+endif()
+if(JOGL_LIB)
+    set(JAVA_COMPILATION_CLASSPATH "${JAVA_COMPILATION_CLASSPATH}${SEPARATOR}${JOGL_LIB}")
+endif()
+if(JOGL_GLUE)
+    set(JAVA_COMPILATION_CLASSPATH "${JAVA_COMPILATION_CLASSPATH}${SEPARATOR}${JOGL_GLUE}")
+endif()
 
-    ADD_CUSTOM_COMMAND( 
-      SOURCE    VTKJava
-      TARGET    VTKJava
-      DEPENDS   ${VTK_JAR_PATH}/vtk.jar ${JAVA_TESTS}
-      )   
+# Set the javac source version
+set(VTK_JAVA_SOURCE_VERSION "1.5" CACHE STRING "javac source version")
+mark_as_advanced(VTK_JAVA_SOURCE_VERSION)
+set(VTK_JAVA_TARGET_VERSION "1.5" CACHE STRING "javac target version")
+mark_as_advanced(VTK_JAVA_TARGET_VERSION)
 
-  ELSE(VTK_JAVA_NEW_STYLE)
+# On machines with long paths to VTK (or windows where the command line length
+# is short), we cannot just list all the java files on the command line.  So
+# we put them in a response file and give that to javac
+# FIXME - Ideally we should make this run every build, but this is not well
+#          supported right now...
+add_custom_command(
+  OUTPUT ${VTK_BINARY_DIR}/java/javac_stamp.rsp
+  DEPENDS ${VTK_JAVA_SOURCE_FILES}
+  COMMAND ${CMAKE_COMMAND}
+          -DVTK_JAVA_SWT_COMPONENT=${VTK_JAVA_SWT_COMPONENT}
+          -DVTK_JAVA_JOGL_COMPONENT=${VTK_JAVA_JOGL_COMPONENT}
+          -DVTK_BINARY_DIR=${VTK_BINARY_DIR}
+          -DRSP_FILENAME=${VTK_BINARY_DIR}/java/javac_stamp.rsp
+          -P ${CMAKE_CURRENT_SOURCE_DIR}/MakeJavacResponseFile.cmake
+  COMMENT "Creating javac response file"
+  )
 
-    ADD_CUSTOM_TARGET(VTKJava ALL)
+# Compile the Java classes
+add_custom_command(
+  OUTPUT ${VTK_BINARY_DIR}/java/javac_stamp.txt
+  DEPENDS ${VTK_BINARY_DIR}/java/javac_stamp.rsp ${VTK_JAVA_SOURCE_FILES}
+  COMMAND ${JAVA_COMPILE} ${JAVAC_OPTIONS}
+          -source ${VTK_JAVA_SOURCE_VERSION}
+          -target ${VTK_JAVA_TARGET_VERSION}
+          -classpath ${JAVA_COMPILATION_CLASSPATH}
+          -sourcepath ${VTK_SOURCE_DIR}/Wrapping/Java/
+          -d ${VTK_BINARY_DIR}/java
+          @${VTK_BINARY_DIR}/java/javac_stamp.rsp
+  COMMAND ${CMAKE_COMMAND} -E touch ${VTK_BINARY_DIR}/java/javac_stamp.txt
+  COMMENT "Compiling Java Classes"
+  )
 
-    ADD_CUSTOM_COMMAND(SOURCE ${VTK_JAVA_HOME}/VTKJavaWrapped
-      COMMAND ${JAVA_COMPILE} 
-      ARGS ${VTK_JAVA_HOME}/vtk*.java
-      TARGET VTKJava
-      OUTPUTS ${VTK_JAVA_HOME}/vtkObject.class)
+# Create the JAR file containing all compiled classes and
+add_custom_command(
+  COMMAND ${JAVA_ARCHIVE} -cvf  "${VTK_JAR_PATH}/vtk.jar"
+  -C ${VTK_BINARY_DIR}/java
+  vtk
+  DEPENDS ${VTK_BINARY_DIR}/java/javac_stamp.txt ${JAVA_LIBRARIES}
+  OUTPUT ${VTK_JAR_PATH}/vtk.jar
+  COMMENT "Java Archive"
+  )
 
-    IF(JAVA_ARCHIVE)
-      ADD_CUSTOM_COMMAND(SOURCE ${VTK_JAVA_HOME}/vtkObject.class
-        COMMAND ${CMAKE_COMMAND}
-        ARGS -E chdir 
-        ${VTK_BINARY_DIR}/java ${JAVA_ARCHIVE}
-        -cvf "\"${VTK_JAR_PATH}/vtk.jar\""
-        vtk
-        TARGET VTKJava
-        DEPENDS ${VTK_JAVA_HOME}/vtkObject.class
-        OUTPUTS ${VTK_JAR_PATH}/vtk.jar)
+if(BUILD_TESTING)
+  foreach(jfile
+    Regression
+    ConcurrencyGC
+    JavaDelete
+    ManualGC
+    JavaGCAndDelete)
+    list(APPEND VTK_JAVA_TESTS ${VTK_SOURCE_DIR}/Wrapping/Java/vtk/test/${jfile}.java)
+    # Add to class list so classes get cleaned up
+    list(APPEND VTK_JAVA_CLASS_FILES ${VTK_BINARY_DIR}/Wrapping/Java/vtk/test/${jfile}.class)
+  endforeach()
 
-      IF(BUILD_TESTING)
-        IF(WIN32)
-          SET(SEPARATOR "\;")
-        ELSE(WIN32)
-          SET(SEPARATOR ":")
-        ENDIF(WIN32)
-
-        FOREACH(jfile
-            Regression
-            ConcurrencyGC
-            JavaDelete
-            JavaGCAndDelete
-            ManualGC
-            vtkJavaTesting)
-          ADD_CUSTOM_COMMAND(
-            SOURCE ${VTK_SOURCE_DIR}/Wrapping/Java/vtk/test/${jfile}.java
-            COMMAND ${JAVA_COMPILE}
-            ARGS -classpath ${VTK_JAR_PATH}/vtk.jar${SEPARATOR}${VTK_BINARY_DIR}/Wrapping/Java
+  # Compile Java Tests
+  add_custom_command(
+    OUTPUT ${VTK_BINARY_DIR}/java/javac_tests_stamp.txt
+    COMMAND ${JAVA_COMPILE} ${JAVAC_OPTIONS}
+            -classpath ${VTK_JAR_PATH}/vtk.jar${SEPARATOR}${VTK_BINARY_DIR}/Wrapping/Java
+            -source ${VTK_JAVA_SOURCE_VERSION}
+            -target ${VTK_JAVA_TARGET_VERSION}
             -sourcepath ${VTK_SOURCE_DIR}/Wrapping/Java
             -d ${VTK_BINARY_DIR}/Wrapping/Java
-            ${VTK_SOURCE_DIR}/Wrapping/Java/vtk/test/${jfile}.java
-            TARGET VTKJava
-            DEPENDS ${VTK_JAR_PATH}/vtk.jar
-            OUTPUTS ${VTK_BINARY_DIR}/Wrapping/Java/vtk/test/${jfile}.class)
-          SET(JAVA_TESTS ${JAVA_TESTS} ${VTK_BINARY_DIR}/Wrapping/Java/${jfile}.class)
-        ENDFOREACH(jfile)
+            ${VTK_JAVA_TESTS}
+    COMMAND ${CMAKE_COMMAND} -E touch ${VTK_BINARY_DIR}/java/javac_tests_stamp.txt
+    DEPENDS ${VTK_JAR_PATH}/vtk.jar ${VTK_JAVA_TESTS}
+    COMMENT "Compiling Java Tests"
+    )
 
-        # Since vtkTesting is within vtkRendering we need blockers
-        IF(VTK_USE_RENDERING AND VTK_USE_DISPLAY)
-          ADD_TEST(JavaRegression ${JAVA_RUNTIME} 
-            -classpath ${VTK_JAR_PATH}/vtk.jar${SEPARATOR}${VTK_BINARY_DIR}/Wrapping/Java
-            vtk.test.Regression -D ${VTK_DATA_ROOT}
-            -V Baseline/Graphics/Cone.png 
-            -T ${VTK_BINARY_DIR}/Testing/Temporary)
-        ENDIF(VTK_USE_RENDERING AND VTK_USE_DISPLAY)
-        
-        ADD_TEST(JavaGCRegression ${JAVA_RUNTIME} ${VTK_TEST_JAVA_DATAMODEL_FLAG} 
-          -classpath ${VTK_JAR_PATH}/vtk.jar${SEPARATOR}${VTK_BINARY_DIR}/Wrapping/Java
-          vtk.test.ConcurrencyGC
-          -T ${VTK_BINARY_DIR}/Testing/Temporary)
-          
-        ADD_TEST(JavaDeleteRegression ${JAVA_RUNTIME} ${VTK_TEST_JAVA_DATAMODEL_FLAG} 
-          -classpath ${VTK_JAR_PATH}/vtk.jar${SEPARATOR}${VTK_BINARY_DIR}/Wrapping/Java
-          vtk.test.JavaDelete
-          -T ${VTK_BINARY_DIR}/Testing/Temporary)
-        
-        ADD_TEST(JavaManualGC ${JAVA_RUNTIME} ${VTK_TEST_JAVA_DATAMODEL_FLAG} 
-          -classpath ${VTK_JAR_PATH}/vtk.jar${SEPARATOR}${VTK_BINARY_DIR}/Wrapping/Java
-          vtk.test.ManualGC
-          -T ${VTK_BINARY_DIR}/Testing/Temporary)
-          
-        ADD_TEST(JavaDeleteAndGC ${JAVA_RUNTIME} ${VTK_TEST_JAVA_DATAMODEL_FLAG} 
-          -classpath ${VTK_JAR_PATH}/vtk.jar${SEPARATOR}${VTK_BINARY_DIR}/Wrapping/Java
-          vtk.test.JavaGCAndDelete
-          -T ${VTK_BINARY_DIR}/Testing/Temporary)
-          
-      ENDIF(BUILD_TESTING)
+  # Since vtkTesting is within vtkTestingRendering we need blockers
+  if(vtkTestingRendering_ENABLED)
 
-      ADD_CUSTOM_COMMAND( 
-        SOURCE    VTKJava
-        COMMAND   echo 
-        ARGS "Checking dependencies for VTK Java"
-        TARGET    VTKJava
-        DEPENDS   ${VTK_JAR_PATH}/vtk.jar ${JAVA_TESTS}
-        )   
+    # Require Rendering
+    if(vtkRendering${VTK_RENDERING_BACKEND}_ENABLED)
+      # If JAVA_DATAMODEL_FLAG is set, pass it as first argument. Otherwise, it's empty.
+      # For example, use "-d64" to force 64-bit java jvm.
+      #
+      ExternalData_add_test(VTKData
+         JavaRendering ${JAVA_RUNTIME} ${VTK_TEST_JAVA_DATAMODEL_FLAG}
+         -classpath "${VTK_JAR_PATH}/vtk.jar${SEPARATOR}${VTK_BINARY_DIR}/Wrapping/Java"
+         vtk.test.Regression -D ${VTK_TEST_DATA_DIR}
+         -V DATA{Baseline/Cone.png,:}
+         -T ${VTK_TEST_OUTPUT_DIR}
+         )
+    endif()
 
-    ENDIF(JAVA_ARCHIVE)
-  ENDIF(VTK_JAVA_NEW_STYLE)
+    add_test(JavaGCRegression ${JAVA_RUNTIME} ${VTK_TEST_JAVA_DATAMODEL_FLAG}
+      -classpath ${VTK_JAR_PATH}/vtk.jar${SEPARATOR}${VTK_BINARY_DIR}/Wrapping/Java
+      vtk.test.ConcurrencyGC
+      -T ${VTK_TEST_OUTPUT_DIR}
+      )
 
-  IF(NOT VTK_INSTALL_NO_RUNTIME)
-    INSTALL(FILES
-      ${VTK_JAR_PATH}/vtk.jar
-      DESTINATION ${VTK_INSTALL_JAVA_DIR_CM24}
-      COMPONENT RuntimeLibraries)
-  ENDIF(NOT VTK_INSTALL_NO_RUNTIME)
-ENDIF(JAVA_COMPILE)
+    add_test(JavaDeleteRegression ${JAVA_RUNTIME} ${VTK_TEST_JAVA_DATAMODEL_FLAG}
+      -classpath ${VTK_JAR_PATH}/vtk.jar${SEPARATOR}${VTK_BINARY_DIR}/Wrapping/Java
+      vtk.test.JavaDelete
+     -T ${VTK_TEST_OUTPUT_DIR}
+     )
+
+    add_test(JavaManualGC ${JAVA_RUNTIME} ${VTK_TEST_JAVA_DATAMODEL_FLAG}
+      -classpath ${VTK_JAR_PATH}/vtk.jar${SEPARATOR}${VTK_BINARY_DIR}/Wrapping/Java
+      vtk.test.ManualGC
+      -T ${VTK_TEST_OUTPUT_DIR}
+      )
+
+    add_test(JavaDeleteAndGC ${JAVA_RUNTIME} ${VTK_TEST_JAVA_DATAMODEL_FLAG}
+      -classpath ${VTK_JAR_PATH}/vtk.jar${SEPARATOR}${VTK_BINARY_DIR}/Wrapping/Java
+      vtk.test.JavaGCAndDelete
+     -T ${VTK_TEST_OUTPUT_DIR}
+     )
+  endif()
+endif()
+
+# Make sure .class files are cleaned up
+set_directory_properties(PROPERTIES ADDITIONAL_MAKE_CLEAN_FILES "${VTK_JAVA_CLASS_FILES}")
+install(FILES
+  ${VTK_JAR_PATH}/vtk.jar
+  DESTINATION ${VTK_INSTALL_LIBRARY_DIR}
+  COMPONENT RuntimeLibraries)
+
+#-----------------------------------------------------------------------------
+# Post-Install script for Custom Java Packaging
+# This install rule MUST stay at the bottom of that CMakeLists file as
+# it has to be the last install rule that get executed
+if(VTK_JAVA_INSTALL)
+  set(MAVEN_NATIVE_ARTIFACT_XML)
+  foreach(native_name ${MAVEN_NATIVE_ARTIFACTS})
+     set(MAVEN_NATIVE_ARTIFACT_XML "${MAVEN_NATIVE_ARTIFACT_XML}\n                                <artifact><file>vtk-${VTK_MAJOR_VERSION}.${VTK_MINOR_VERSION}-natives-${native_name}.jar</file><classifier>natives-${native_name}</classifier><type>jar</type></artifact>")
+  endforeach()
+  if(VTK_JAVA_JOGL_COMPONENT)
+    set(MAVEN_DEPENDENCY_XML "${MAVEN_DEPENDENCY_XML}\n      <dependency><groupId>org.jogamp.jogl</groupId><artifactId>jogl-all-main</artifactId><version>${JOGL_VERSION}</version></dependency>\n      <dependency><groupId>org.jogamp.gluegen</groupId><artifactId>gluegen-rt-main</artifactId><version>${JOGL_VERSION}</version></dependency>")
+  endif()
+  configure_file(JavaInstall.cmake.in
+               ${VTK_BINARY_DIR}/JavaInstall.cmake @ONLY)
+  configure_file(Maven/pom.xml.in
+               ${VTK_BINARY_DIR}/pom.xml @ONLY)
+  configure_file(Maven/README.txt.in
+               ${VTK_BINARY_DIR}/MAVEN-README.txt @ONLY)
+  install(SCRIPT ${VTK_BINARY_DIR}/JavaInstall.cmake)
+endif()

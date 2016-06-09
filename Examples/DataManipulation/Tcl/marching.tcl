@@ -48,7 +48,7 @@ vtkUnstructuredGrid Grid
 
 # Find the triangles that lie along the 0.5 contour in this cube.
 vtkContourFilter Marching
-	Marching SetInput Grid
+	Marching SetInputData Grid
         Marching SetValue 0 0.5
 	Marching Update
 
@@ -115,13 +115,13 @@ vtkSphereSource Sphere
   Sphere SetThetaResolution 20
 # Remove the part of the cube with data values below 0.5.
 vtkThresholdPoints ThresholdIn
-  ThresholdIn SetInput Grid
+  ThresholdIn SetInputData Grid
   ThresholdIn ThresholdByUpper .5
 # Display spheres at the vertices remaining in the cube data set after
 # it was passed through vtkThresholdPoints.
 vtkGlyph3D Vertices
   Vertices SetInputConnection [ThresholdIn GetOutputPort]
-  Vertices SetSource [Sphere GetOutput]
+  Vertices SetSourceConnection [Sphere GetOutputPort]
 # Create a mapper and actor to display the glyphs.
 vtkPolyDataMapper SphereMapper
   SphereMapper SetInputConnection [Vertices GetOutputPort]
@@ -145,14 +145,14 @@ vtkTransform aLabelTransform
 vtkTransformPolyDataFilter labelTransform
   labelTransform SetTransform aLabelTransform
   labelTransform SetInputConnection [caseLabel GetOutputPort]
-  
+
 # Create a mapper and actor to display the text.
 vtkPolyDataMapper labelMapper
   labelMapper SetInputConnection [labelTransform GetOutputPort];
- 
+
 vtkActor labelActor
   labelActor SetMapper labelMapper
- 
+
 # Define the base that the cube sits on.  Create its associated mapper
 # and actor.  Set the position of the actor.
 vtkCubeSource baseModel
@@ -206,3 +206,4 @@ iren Initialize
 
 # Withdraw the default tk window.
 wm withdraw .
+iren Start

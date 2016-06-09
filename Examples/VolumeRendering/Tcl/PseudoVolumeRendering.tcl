@@ -10,17 +10,19 @@ package require vtktesting
 
 # Create pipeline. Read structured grid data.
 #
-vtkPLOT3DReader pl3d
+vtkMultiBlockPLOT3DReader pl3d
     pl3d SetXYZFileName "$VTK_DATA_ROOT/Data/combxyz.bin"
     pl3d SetQFileName "$VTK_DATA_ROOT/Data/combq.bin"
     pl3d SetScalarFunctionNumber 100
     pl3d SetVectorFunctionNumber 202
     pl3d Update
 
+set pl3dOutput [[pl3d GetOutput] GetBlock 0]
+
 # A convenience, use this filter to limit data for experimentation.
 vtkExtractGrid extract
   extract SetVOI 1 55 -1000 1000 -1000 1000
-  extract SetInputConnection [pl3d GetOutputPort]
+  extract SetInputData $pl3dOutput
 
 # The (implicit) plane is used to do the cutting
 vtkPlane plane
@@ -28,7 +30,7 @@ vtkPlane plane
   plane SetNormal 0 1 0
 
 # The cutter is set up to process each contour value over all cells
-# (SetSortByToSortByCell). This results in an ordered output of polygons 
+# (SetSortByToSortByCell). This results in an ordered output of polygons
 # which is key to the compositing.
 vtkCutter cutter
   cutter SetInputConnection [extract GetOutputPort]
@@ -50,7 +52,7 @@ vtkActor cut
 
 # Add in some surface geometry for interest.
 vtkContourFilter iso
-    iso SetInputConnection [pl3d GetOutputPort]
+    iso SetInputData $pl3dOutput
     iso SetValue 0 .22
 vtkPolyDataNormals normals
     normals SetInputConnection [iso GetOutputPort]
@@ -67,7 +69,7 @@ vtkActor isoActor
     eval [isoActor GetProperty] SetSpecularPower 30
 
 vtkStructuredGridOutlineFilter outline
-    outline SetInputConnection [pl3d GetOutputPort]
+    outline SetInputData $pl3dOutput
 vtkTubeFilter outlineTubes
   outlineTubes SetInputConnection [outline GetOutputPort]
   outlineTubes SetRadius .1
@@ -124,3 +126,4 @@ Cut 20
 
 # prevent the tk window from showing up then start the event loop
 wm withdraw .
+iren Start

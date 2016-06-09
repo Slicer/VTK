@@ -32,7 +32,7 @@ public:
         }
       }
     }
-  vtkAbortCallback(){};
+  vtkAbortCallback(){}
 };
 
 //---------------------------------------------------------------------------
@@ -165,4 +165,4 @@ __published:
 
 void CheckAbortFunc(void *);
 
- 
+

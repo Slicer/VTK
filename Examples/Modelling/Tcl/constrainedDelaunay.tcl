@@ -1,4 +1,4 @@
-# This example demonstrates how to use a constraint polygon in Delaunay 
+# This example demonstrates how to use a constraint polygon in Delaunay
 # triangulation.
 #
 package require vtk
@@ -103,8 +103,8 @@ vtkPolyData polyData
 # direction to indicate inside and outside of the polygon.
 #
 vtkDelaunay2D del
-    del SetInput polyData
-    del SetSource polyData
+    del SetInputData polyData
+    del SetSourceData polyData
 vtkPolyDataMapper mapMesh
     mapMesh SetInputConnection [del GetOutputPort]
 vtkActor meshActor
@@ -151,3 +151,4 @@ iren Initialize
 
 # prevent the tk window from showing up then start the event loop
 wm withdraw .
+iren Start

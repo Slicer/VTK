@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 from vtk import *
 
 source = vtkRandomGraphSource()
@@ -50,4 +51,4 @@ view.ResetCamera()
 view.Render()
 
 view.GetInteractor().Start()
-                      
+

@@ -32,7 +32,7 @@ vtkContourFilter contour
 vtkPolyDataMapper impMapper
     impMapper SetInputConnection [contour GetOutputPort]
     impMapper ScalarVisibilityOff
-vtkActor impActor;  
+vtkActor impActor;
     impActor SetMapper impMapper
     eval [impActor GetProperty] SetColor $peacock
     [impActor GetProperty] SetOpacity 0.5
@@ -66,5 +66,5 @@ iren AddObserver UserEvent {wm deiconify .vtkInteract}
 
 # prevent the tk window from showing up then start the event loop
 wm withdraw .
-
+iren Start
 

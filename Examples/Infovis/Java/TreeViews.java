@@ -25,7 +25,7 @@ public class TreeViews extends JFrame {
   private vtkRenderWindowPanel panel2;
   private vtkRenderWindowPanel panel3;
   private vtkRenderWindowPanel panel4;
-  
+
   private vtkXMLTreeReader reader = new vtkXMLTreeReader();
   private vtkTreeLevelsFilter levels = new vtkTreeLevelsFilter();
 
@@ -51,10 +51,10 @@ public class TreeViews extends JFrame {
       nameArr.InsertNextValue("" + i);
     }
     g.GetVertexData().AddArray(nameArr);
-    
+
     vtkTree tree = new vtkTree();
     tree.ShallowCopy(g);
-    levels.SetInput(tree);
+    levels.SetInputData(tree);
 
     // Create the selection link.
     // This is shared among all views in order to link the selection.
@@ -150,7 +150,7 @@ public class TreeViews extends JFrame {
     menuItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_O,
         ActionEvent.CTRL_MASK));
     menuItem.addActionListener(new ActionListener() {
-      @Override
+
       public void actionPerformed(ActionEvent e) {
         // Create a file chooser
         final JFileChooser fc = new JFileChooser();
@@ -185,17 +185,16 @@ public class TreeViews extends JFrame {
     }
   }
 
-  // In the static constructor we load in the native code.
-  // The libraries must be in your path to work.
+  // Load VTK library and print which library was not properly loaded
   static {
-    System.loadLibrary("vtkCommonJava");
-    System.loadLibrary("vtkFilteringJava");
-    System.loadLibrary("vtkIOJava");
-    System.loadLibrary("vtkImagingJava");
-    System.loadLibrary("vtkGraphicsJava");
-    System.loadLibrary("vtkRenderingJava");
-    System.loadLibrary("vtkInfovisJava");
-    System.loadLibrary("vtkViewsJava");
+    if (!vtkNativeLibrary.LoadAllNativeLibraries()) {
+      for (vtkNativeLibrary lib : vtkNativeLibrary.values()) {
+        if (!lib.IsLoaded()) {
+          System.out.println(lib.GetLibraryName() + " not loaded");
+        }
+      }
+    }
+    vtkNativeLibrary.DisableOutputWindow(null);
   }
 
   public static void main(String args[]) {
@@ -206,15 +205,6 @@ public class TreeViews extends JFrame {
     app.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
     app.pack();
     app.setVisible(true);
-
-    app.addWindowListener(new WindowAdapter() {
-      @Override
-      public void windowClosing(WindowEvent e) {
-        // Calling vtkGlobalJavaHash.DeleteAll() will clean up
-        // VTK references before the Java program exits.
-        vtkGlobalJavaHash.DeleteAll();
-      }
-    });
   }
 
 }

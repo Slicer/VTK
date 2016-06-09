@@ -98,11 +98,11 @@ def ClipVolumeRender(obj, event):
     global planes, volumeMapper
     obj.GetPlanes(planes)
     volumeMapper.SetClippingPlanes(planes)
- 
+
 
 # Place the interactor initially. The output of the reader is used to
 # place the box widget.
-boxWidget.SetInput(v16.GetOutput())
+boxWidget.SetInputConnection(v16.GetOutputPort())
 boxWidget.PlaceWidget()
 boxWidget.InsideOutOn()
 boxWidget.AddObserver("StartInteractionEvent", StartInteraction)
@@ -120,7 +120,6 @@ selectedOutlineProperty.SetRepresentationToWireframe()
 selectedOutlineProperty.SetAmbient(1.0)
 selectedOutlineProperty.SetAmbientColor(1, 0, 0)
 selectedOutlineProperty.SetLineWidth(3)
-
 
 iren.Initialize()
 renWin.Render()

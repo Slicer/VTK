@@ -22,8 +22,8 @@
  !!! license.
 =========================================================================*/
 
-#ifdef _MSC_VER
 // Disable warnings that Qt headers give.
+#ifdef _MSC_VER
 #pragma warning(disable:4127)
 #pragma warning(disable:4512)
 #endif
@@ -39,8 +39,10 @@
 #include "QVTKWidget.xpm"
 
 // macro for debug printing
+#ifndef qDebug
 #define qDebug(a)
 //#define qDebug(a) printf(a)
+#endif
 
 QVTKWidgetPlugin::QVTKWidgetPlugin()
 {
@@ -51,7 +53,7 @@ QVTKWidgetPlugin::~QVTKWidgetPlugin()
 {
   qDebug("QVTKWidgetPlugin destructed\n");
 }
-    
+
 //! return the name of this widget
 QString QVTKWidgetPlugin::name() const
 {
@@ -77,8 +79,8 @@ QWidget* QVTKWidgetPlugin::createWidget(QWidget* parent)
 {
   qDebug("QVTKWidgetPlugin::createWidget\n");
   QVTKWidget* widget = new QVTKWidget(parent);
- 
-  // make black background 
+
+  // make black background
   QPalette p = widget->palette();
   p.setColor(QPalette::Background, QColor("black"));
   widget->setPalette(p);
@@ -144,5 +146,7 @@ QList<QDesignerCustomWidgetInterface*> QVTKPlugin::customWidgets() const
   return plugins;
 }
 
+#if QT_VERSION < 0x050000
 Q_EXPORT_PLUGIN(QVTKPlugin)
+#endif
 

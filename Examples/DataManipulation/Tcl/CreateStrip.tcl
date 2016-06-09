@@ -36,7 +36,7 @@ vtkPolyData profile
     profile SetStrips strips
 
 vtkPolyDataMapper map
-    map SetInput profile
+    map SetInputData profile
 
 vtkActor strip
     strip SetMapper map
@@ -63,6 +63,6 @@ iren AddObserver UserEvent {wm deiconify .vtkInteract}
 
 # prevent the tk window from showing up then start the event loop
 wm withdraw .
-
+iren Start
 
 

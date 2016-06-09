@@ -1,34 +1,43 @@
+cmake_minimum_required(VERSION 2.8.5 FATAL_ERROR)
+if(POLICY CMP0025)
+  cmake_policy(SET CMP0025 NEW) # CMake 3.0
+endif()
+if(POLICY CMP0053)
+  cmake_policy(SET CMP0053 NEW) # CMake 3.1
+endif()
+
 PROJECT (IO)
-CMAKE_MINIMUM_REQUIRED(VERSION 2.6)
 
-IF(NOT VTK_BINARY_DIR)
-FIND_PACKAGE(VTK REQUIRED)
-INCLUDE(${VTK_USE_FILE})
-ENDIF(NOT VTK_BINARY_DIR)
+find_package(VTK COMPONENTS
+  vtkCommonCore
+  vtkIOLegacy
+  vtkIOXML
+  vtkTestingRendering
+  vtksys
+)
+include(${VTK_USE_FILE})
 
-ADD_EXECUTABLE(DumpXMLFile DumpXMLFile.cxx)
-TARGET_LINK_LIBRARIES(DumpXMLFile vtkIO vtkGraphics)
+add_executable(DumpXMLFile MACOSX_BUNDLE DumpXMLFile.cxx)
+target_link_libraries(DumpXMLFile ${VTK_LIBRARIES})
 
-ADD_EXECUTABLE(ParticleReader ParticleReader.cxx)
-TARGET_LINK_LIBRARIES(ParticleReader vtkHybrid)
+add_executable(ParticleReader MACOSX_BUNDLE ParticleReader.cxx)
+target_link_libraries(ParticleReader ${VTK_LIBRARIES})
 
-######## Regression Testing ########
-SET(KIT IOExamples)
-SET(MyTests TestDumpXMLFile.cxx TestParticleReader.cxx)
-
-INCLUDE(vtkTestingObjectFactory)
-
-ADD_EXECUTABLE(${KIT}CxxTests ${KIT}CxxTests.cxx
-               ${MyTests})
-TARGET_LINK_LIBRARIES(${KIT}CxxTests vtkRendering vtkWidgets)
-
-IF (VTK_DATA_ROOT)
-ADD_TEST(${KIT}-ParticleReader ${EXECUTABLE_OUTPUT_PATH}/${KIT}CxxTests
-         TestParticleReader
-           ${VTK_DATA_ROOT}/Data/golf.csv
-           ${VTK_BINARY_DIR}/Testing/Temporary/TestParticleReader.vtp)
-ADD_TEST(${KIT}-DumpXMLFile ${EXECUTABLE_OUTPUT_PATH}/${KIT}CxxTests
-         TestDumpXMLFile
-           ${VTK_DATA_ROOT}/Data/cow.vtp)
-ENDIF (VTK_DATA_ROOT)
-
+if(BUILD_TESTING)
+  if(vtkTestingRendering_LOADED)
+    ######## Regression Testing ########
+    set(vtk-example IOExamples)
+    set(TestDumpXMLFile_ARGS "DATA{${VTK_TEST_INPUT_DIR}/cow.vtp}")
+    set(TestParticleReader_ARGS
+      "${VTK_TEST_DATA_DIR}/Data/golf.csv"
+      ${VTK_TEST_OUTPUT_DIR}/TestParticleReader.vtp)
+    vtk_add_test_cxx(${vtk-example}CxxTests tests
+      NO_DATA NO_VALID NO_OUTPUT
+      TestParticleReader.cxx
+      TestDumpXMLFile.cxx
+      )
+    vtk_test_cxx_executable(${vtk-example}CxxTests tests
+      RENDERING_FACTORY
+      )
+  endif()
+endif()

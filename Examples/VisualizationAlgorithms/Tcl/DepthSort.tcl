@@ -1,4 +1,4 @@
-# This example demonstrates the use of vtkDepthSortPolyData. This is a 
+# This example demonstrates the use of vtkDepthSortPolyData. This is a
 # poor man's algorithm to sort polygons for proper transparent blending.
 # It sorts polygons based on a single point (i.e., centroid) so the sorting
 # may not work for overlapping or intersection polygons.
@@ -8,7 +8,7 @@ package require vtkinteraction
 
 # Create a bunch of spheres that overlap and cannot be easily arranged
 # so that the blending works without sorting. They are appended into a
-# single vtkPolyData because the filter only sorts within a single 
+# single vtkPolyData because the filter only sorts within a single
 # vtkPolyData input.
 #
 vtkSphereSource sphere
@@ -37,11 +37,11 @@ vtkSphereSource sphere5
     sphere5 SetRadius 0.5
     sphere5 SetCenter 0 -1 0
 vtkAppendPolyData appendData
-    appendData AddInput [sphere GetOutput]
-    appendData AddInput [sphere2 GetOutput]
-    appendData AddInput [sphere3 GetOutput]
-    appendData AddInput [sphere4 GetOutput]
-    appendData AddInput [sphere5 GetOutput]
+    appendData AddInputConnection [sphere GetOutputPort]
+    appendData AddInputConnection [sphere2 GetOutputPort]
+    appendData AddInputConnection [sphere3 GetOutputPort]
+    appendData AddInputConnection [sphere4 GetOutputPort]
+    appendData AddInputConnection [sphere5 GetOutputPort]
 
 # The dephSort object is set up to generate scalars representing
 # the sort depth.  A camera is assigned for the sorting. The camera
@@ -93,3 +93,4 @@ renWin Render
 # prevent the tk window from showing up then start the event loop
 wm withdraw .
 
+iren Start

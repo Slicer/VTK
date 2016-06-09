@@ -1,4 +1,4 @@
-# First we include the VTK Tcl packages which will make available 
+# First we include the VTK Tcl packages which will make available
 # all of the vtk commands to Tcl
 
 package require vtk
@@ -13,7 +13,7 @@ vtkImageReader reader
   reader SetDataMask 0x7fff
 
 reader Update
-scan [[reader GetOutput] GetWholeExtent] "%d %d %d %d %d %d" \
+scan [[reader GetExecutive] GetWholeExtent [reader GetOutputInformation 0]] "%d %d %d %d %d %d" \
         xMin xMax yMin yMax zMin zMax
 
 # Magnify the image
@@ -35,7 +35,7 @@ vtkImageViewer viewer2
 # the other for the histogram, and a slice slider
 
 wm withdraw .
-toplevel .top 
+toplevel .top
 
 # Set the window manager (wm command) so that it registers a
 # command to handle the WM_DELETE_WINDOW protocal request. This
@@ -48,14 +48,14 @@ wm protocol .top WM_DELETE_WINDOW ::vtk::cb_exit
 
 # Create the vtkTkImageViewerWidget
 
-frame .top.f1 
+frame .top.f1
 
 set vtkiw [vtkTkImageViewerWidget .top.f1.r1 \
         -width [expr ($xMax - $xMin + 1) * $mag_factor] \
         -height [expr ($yMax - $yMin + 1) * $mag_factor] \
         -iv viewer2]
 
-# Setup some Tk bindings, a generic renwin interactor and VTK observers 
+# Setup some Tk bindings, a generic renwin interactor and VTK observers
 # for that widget
 
 ::vtk::bind_tk_imageviewer_widget $vtkiw
@@ -68,7 +68,7 @@ set hist [vtkHistogramWidget .top.f1.r2 512 192]
 
 set slice_number [viewer2 GetZSlice]
 
-HistogramWidgetSetInput $hist [reader GetOutput]
+HistogramWidgetSetInput $hist [reader GetOutputPort]
 HistogramWidgetSetExtent $hist $xMin $xMax $yMin $yMax $slice_number $slice_number
 
 HistogramWidgetBind .top.f1.r2
@@ -119,6 +119,6 @@ pack .top.slice .top.btn \
         -fill x -expand f
 
 # You only need this line if you run this script from a Tcl shell
-# (tclsh) instead of a Tk shell (wish) 
+# (tclsh) instead of a Tk shell (wish)
 
 tkwait window .

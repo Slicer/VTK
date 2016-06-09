@@ -1,0 +1,27 @@
+// Configured by VTK/Wrapping/CMakeLists.txt
+// Adpated from output of vtkWrapPythonInit in VTK/Wrapping
+#include "vtkSystemIncludes.h"
+// Handle compiler warning messages, etc.
+#if defined( _MSC_VER ) && !defined(VTK_DISPLAY_WIN32_WARNINGS)
+#pragma warning ( disable : 4706 )
+#endif // Windows Warnings
+
+@KIT_REAL_PYTHON_MODULE_INIT_DECLS@
+
+extern  "C" { VTK_ABI_EXPORT void init@KIT_NAME@Python(); }
+
+void init@KIT_NAME@Python()
+{
+  @KIT_REAL_PYTHON_MODULE_INIT_CALLS@
+}
+
+#if defined(__CYGWIN__) || !defined(_WIN32)
+
+extern  "C" { VTK_ABI_EXPORT void initlib@KIT_NAME@Python(); }
+
+void initlib@KIT_NAME@Python()
+{
+  @KIT_REAL_PYTHON_MODULE_WITH_LIBPREFIX_INIT_CALLS@
+}
+
+#endif

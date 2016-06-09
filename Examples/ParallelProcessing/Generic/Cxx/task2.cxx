@@ -21,14 +21,14 @@
 // See TaskParallelism.cxx for more information.
 vtkPolyDataMapper* task2(vtkRenderWindow* renWin, double data,
                          vtkCamera* cam)
-{  
+{
   double extent = data;
-  int iextent = static_cast<int>(data);  
+  int iextent = static_cast<int>(data);
   // The pipeline
 
   // Synthetic image source.
   vtkRTAnalyticSource* source1 = vtkRTAnalyticSource::New();
-  source1->SetWholeExtent (-1*iextent, iextent, -1*iextent, iextent, 
+  source1->SetWholeExtent (-1*iextent, iextent, -1*iextent, iextent,
                            -1*iextent, iextent );
   source1->SetCenter(0, 0, 0);
   source1->SetStandardDeviation( 0.5 );
@@ -65,7 +65,7 @@ vtkPolyDataMapper* task2(vtkRenderWindow* renWin, double data,
   // Glyph the gradient vector (with arrows)
   vtkGlyph3D* glyph = vtkGlyph3D::New();
   glyph->SetInputConnection(aa->GetOutputPort());
-  glyph->SetSource(arrow->GetOutput());
+  glyph->SetSourceConnection(arrow->GetOutputPort());
   glyph->ScalingOff();
   glyph->OrientOn();
   glyph->SetVectorModeToUseVector();

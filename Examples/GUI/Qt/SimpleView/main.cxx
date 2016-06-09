@@ -8,23 +8,30 @@
  */
 // QT includes
 #include <QApplication>
-#include <QCleanlooksStyle>
+#if QT_VERSION < 0x050000
+  #include <QCleanlooksStyle>
+#endif
+
 #include "SimpleView.h"
 
 extern int qInitResources_icons();
 
 int main( int argc, char** argv )
 {
-  
+
   // QT Stuff
   QApplication app( argc, argv );
 
-  QApplication::setStyle(new QCleanlooksStyle);
-  
+  #if QT_VERSION >= 0x050000
+    QApplication::setStyle("fusion");
+  #else
+    QApplication::setStyle(new QCleanlooksStyle);
+  #endif
+
   qInitResources_icons();
-  
+
   SimpleView mySimpleView;
   mySimpleView.show();
-  
+
   return app.exec();
 }

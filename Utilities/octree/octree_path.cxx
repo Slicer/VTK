@@ -46,12 +46,12 @@
   */
 
 /**\var template<typename T_,typename R_,typename P_,typename O_,typename OP_,int d_> \
-  *     vtkstd::vector<octree_node_pointer> octree_path<T_,R_,P_,O_,OP_,d_>::_M_parents
+  *     std::vector<octree_node_pointer> octree_path<T_,R_,P_,O_,OP_,d_>::_M_parents
   *\brief List of parent nodes
   */
 
 /**\var template<typename T_,typename R_,typename P_,typename O_,typename OP_,int d_> \
-  *     vtkstd::vector<int> octree_path<T_,R_,P_,O_,OP_,d_>::_M_indices
+  *     std::vector<int> octree_path<T_,R_,P_,O_,OP_,d_>::_M_indices
   *\brief List of parent child indices
   */
 
@@ -97,24 +97,16 @@ octree_path<T_,R_,P_,O_,OP_,d_>::octree_path( octree_node_pointer root )
   * given a \a path of nodes to descend from the root of the \a tree.
   */
 template< typename T_, typename R_, typename P_, typename O_, typename OP_, int d_ >
-octree_path<T_,R_,P_,O_,OP_,d_>::octree_path( octree_node_pointer root, vtkstd::vector<int>& children )
+octree_path<T_,R_,P_,O_,OP_,d_>::octree_path( octree_node_pointer root, std::vector<int>& children )
 {
   this->_M_root = root;
   this->_M_current_node = root;
-  for ( vtkstd::vector<int>::iterator cit = children.begin(); cit != children.end(); ++cit )
+  for ( std::vector<int>::iterator cit = children.begin(); cit != children.end(); ++cit )
     {
     this->_M_parents.push_back( this->_M_current_node );
     this->_M_indices.push_back( *cit );
     this->_M_current_node = (*this->_M_current_node)[*cit];
     }
-}
-
-/**\brief Destructor.
-  *
-  */
-template< typename T_, typename R_, typename P_, typename O_, typename OP_, int d_ >
-octree_path<T_,R_,P_,O_,OP_,d_>::~octree_path()
-{
 }
 
 /**\fn template< typename T_, typename R_, typename P_, typename O_, typename OP_, int d_ > \
@@ -134,41 +126,6 @@ octree_path<T_,R_,P_,O_,OP_,d_>::~octree_path()
   * The root node of the octree is at level 0. Its children are all at level 1. Their children are at level 2,
   * and so forth.
   */
-
-
-/**\brief Assignment operator (for copying paths of mutable nodes).
-  *
-  */
-template< typename T_, typename R_, typename P_, typename O_, typename OP_, int d_ >
-octree_path<T_,R_,P_,O_,OP_,d_>& octree_path<T_,R_,P_,O_,OP_,d_>::operator = ( const path& src )
-{
-  this->_M_root = src._M_root;
-  this->_M_parents = src._M_parents;
-  this->_M_indices = src._M_indices;
-  this->_M_current_node = src._M_current_node;
-  return *this;
-}
-
-/**\fn    template< typename T_, typename R_, typename P_, typename O_, typename OP_, int d_ > \
-  *       self_path& octree_path<T_,R_,P_,O_,OP_,d_>::operator = ( const const_path& src )
-  *\brief Assignment operator (for copying paths of immutable nodes).
-  * Frappy
-  */
-
-/**\brief Assignment operator (for copying paths of immutable nodes).
-  *
-  */
-#if ! ( defined(_MSC_VER) && (_MSC_VER < 1300) )
-template< typename T_, typename R_, typename P_, typename O_, typename OP_, int d_ >
-octree_path<T_,R_,P_,O_,OP_,d_>& octree_path<T_,R_,P_,O_,OP_,d_>::operator = ( const const_path& src )
-{
-  this->_M_root = const_cast<octree_node_pointer>( src._M_root );
-  this->_M_parents = src._M_parents;
-  this->_M_indices = src._M_indices;
-  this->_M_current_node = src._M_current_node;
-  return *this;
-}
-#endif
 
 /**\fn template< typename T_, typename R_, typename P_, typename O_, typename OP_, int d_ > \
   *    bool octree_path<T_,R_,P_,O_,OP_,d_>::operator == ( const path& it )

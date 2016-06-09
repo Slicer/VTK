@@ -472,8 +472,6 @@
     </node>
     <node id="vtkTableAlgorithm">
     </node>
-    <node id="vtkTemporalDataSetAlgorithm">
-    </node>
     <node id="vtkTreeAlgorithm">
     </node>
     <node id="vtkTrivialProducer">
@@ -517,8 +515,6 @@
     <node id="vtkBiQuadraticQuadraticHexahedron">
     </node>
     <node id="vtkBiQuadraticQuadraticWedge">
-    </node>
-    <node id="vtkExplicitCell">
     </node>
     <node id="vtkQuadraticEdge">
     </node>
@@ -577,8 +573,6 @@
     <node id="vtkMultiBlockDataSet">
     </node>
     <node id="vtkMultiPieceDataSet">
-    </node>
-    <node id="vtkTemporalDataSet">
     </node>
     <node id="vtkDataSet">
     </node>
@@ -797,8 +791,6 @@
     <node id="vtkDSPFilterGroup">
     </node>
     <node id="vtkExodusIICache">
-    </node>
-    <node id="vtkExodusModel">
     </node>
     <node id="vtkRIBExporter">
     </node>

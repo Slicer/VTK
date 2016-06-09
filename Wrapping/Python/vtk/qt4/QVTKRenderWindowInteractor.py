@@ -25,6 +25,9 @@ Changes by Phil Thompson, Oct. 2007
 
 Changes by Phil Thompson, Mar. 2008
  Added cursor support.
+
+Changes by Rodrigo Mologni, Sep. 2013 (Credit to Daniele Esposti)
+ Bug fix to PySide: Converts PyCObject to void pointer.
 """
 
 
@@ -33,10 +36,10 @@ try:
 except ImportError:
     try:
         from PySide import QtCore, QtGui
-    except ImportError as err:
+    except ImportError:
         raise ImportError("Cannot load either PyQt or PySide")
-import vtk
 
+import vtk
 
 class QVTKRenderWindowInteractor(QtGui.QWidget):
 
@@ -127,7 +130,6 @@ class QVTKRenderWindowInteractor(QtGui.QWidget):
         self._ActiveButton = QtCore.Qt.NoButton
 
         # private attributes
-        self.__oldFocus = None
         self.__saveX = 0
         self.__saveY = 0
         self.__saveModifiers = QtCore.Qt.NoModifier
@@ -155,7 +157,17 @@ class QVTKRenderWindowInteractor(QtGui.QWidget):
         else:
             self._RenderWindow = vtk.vtkRenderWindow()
 
-        self._RenderWindow.SetWindowInfo(str(int(self.winId())))
+        WId = self.winId()
+
+        if type(WId).__name__ == 'PyCObject':
+            from ctypes import pythonapi, c_void_p, py_object
+
+            pythonapi.PyCObject_AsVoidPtr.restype  = c_void_p
+            pythonapi.PyCObject_AsVoidPtr.argtypes = [py_object]
+
+            WId = pythonapi.PyCObject_AsVoidPtr(WId)
+
+        self._RenderWindow.SetWindowInfo(str(int(WId)))
 
         if stereo: # stereo mode
             self._RenderWindow.StereoCapableWindowOn()
@@ -182,6 +194,13 @@ class QVTKRenderWindowInteractor(QtGui.QWidget):
         self._Iren.GetRenderWindow().AddObserver('CursorChangedEvent',
                                                  self.CursorChangedEvent)
 
+        #Create a hidden child widget and connect its destroyed signal to its
+        #parent ``Finalize`` slot. The hidden children will be destroyed before
+        #its parent thus allowing cleanup of VTK elements.
+        self._hidden = QtGui.QWidget(self)
+        self._hidden.hide()
+        self.connect(self._hidden, QtCore.SIGNAL('destroyed()'), self.Finalize)
+
     def __getattr__(self, attr):
         """Makes the object behave like a vtkGenericRenderWindowInteractor"""
         if attr == '__vtk__':
@@ -191,6 +210,12 @@ class QVTKRenderWindowInteractor(QtGui.QWidget):
         else:
             raise AttributeError, self.__class__.__name__ + \
                   " has no attribute named " + attr
+
+    def Finalize(self):
+        '''
+        Call internal cleanup method on VTK objects
+        '''
+        self._RenderWindow.Finalize()
 
     def CreateTimer(self, obj, evt):
         self._Timer.start(10)
@@ -219,6 +244,9 @@ class QVTKRenderWindowInteractor(QtGui.QWidget):
         qt_cursor = self._CURSOR_MAP.get(vtk_cursor, QtCore.Qt.ArrowCursor)
         self.setCursor(qt_cursor)
 
+    def closeEvent(self, evt):
+        self.Finalize()
+
     def sizeHint(self):
         return QtCore.QSize(400, 400)
 
@@ -231,9 +259,10 @@ class QVTKRenderWindowInteractor(QtGui.QWidget):
     def resizeEvent(self, ev):
         w = self.width()
         h = self.height()
-
-        self._RenderWindow.SetSize(w, h)
+        vtk.vtkRenderWindow.SetSize(self._RenderWindow, w, h)
         self._Iren.SetSize(w, h)
+        self._Iren.ConfigureEvent()
+        self.update()
 
     def _GetCtrlShift(self, ev):
         ctrl = shift = False
@@ -252,20 +281,12 @@ class QVTKRenderWindowInteractor(QtGui.QWidget):
         return ctrl, shift
 
     def enterEvent(self, ev):
-        if not self.hasFocus():
-            self.__oldFocus = self.focusWidget()
-            self.setFocus()
-
         ctrl, shift = self._GetCtrlShift(ev)
         self._Iren.SetEventInformationFlipY(self.__saveX, self.__saveY,
                                             ctrl, shift, chr(0), 0, None)
         self._Iren.EnterEvent()
 
     def leaveEvent(self, ev):
-        if self.__saveButtons == QtCore.Qt.NoButton and self.__oldFocus:
-            self.__oldFocus.setFocus()
-            self.__oldFocus = None
-
         ctrl, shift = self._GetCtrlShift(ev)
         self._Iren.SetEventInformationFlipY(self.__saveX, self.__saveY,
                                             ctrl, shift, chr(0), 0, None)
@@ -367,7 +388,7 @@ def QVTKRenderWidgetConeExample():
     cone.SetResolution(8)
 
     coneMapper = vtk.vtkPolyDataMapper()
-    coneMapper.SetInput(cone.GetOutput())
+    coneMapper.SetInputConnection(cone.GetOutputPort())
 
     coneActor = vtk.vtkActor()
     coneActor.SetMapper(coneMapper)

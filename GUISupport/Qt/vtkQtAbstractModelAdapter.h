@@ -29,9 +29,10 @@
 // .SECTION See also
 // vtkQtTableModelAdapter vtkQtTreeModelAdapter
 
-#ifndef __vtkQtAbstractModelAdapter_h
-#define __vtkQtAbstractModelAdapter_h
+#ifndef vtkQtAbstractModelAdapter_h
+#define vtkQtAbstractModelAdapter_h
 
+#include "vtkGUISupportQtModule.h" // For export macro
 #include "QVTKWin32Header.h"
 #include <QAbstractItemModel>
 #include <QItemSelection>
@@ -39,7 +40,7 @@
 class vtkDataObject;
 class vtkSelection;
 class QItemSelection;
-class QVTK_EXPORT vtkQtAbstractModelAdapter : public QAbstractItemModel
+class VTKGUISUPPORTQT_EXPORT vtkQtAbstractModelAdapter : public QAbstractItemModel
 {
   Q_OBJECT
 
@@ -51,8 +52,8 @@ public:
     DATA_VIEW
   };
 
-  vtkQtAbstractModelAdapter(QObject* p) : 
-    QAbstractItemModel(p), 
+  vtkQtAbstractModelAdapter(QObject* p) :
+    QAbstractItemModel(p),
     ViewType(FULL_VIEW),
     KeyColumn(-1),
     ColorColumn(-1),
@@ -64,7 +65,7 @@ public:
   // Set/Get the VTK data object as input to this adapter
   virtual void SetVTKDataObject(vtkDataObject *data) = 0;
   virtual vtkDataObject* GetVTKDataObject() const = 0;
-  
+
   // Description:
   // Selection conversion from VTK land to Qt land
   virtual vtkSelection* QModelIndexListToVTKIndexSelection(
@@ -89,7 +90,7 @@ public:
   virtual void SetKeyColumn(int col) { this->KeyColumn = col; }
   virtual int GetKeyColumn() { return this->KeyColumn; }
   virtual void SetKeyColumnName(const char* name) = 0;
-  
+
   // Description:
   // Set/Get the column storing the rgba color values for each row.
   // The color column is used as the row headers in a table view,
@@ -110,12 +111,20 @@ public:
   // We make the reset() method public because it isn't always possible for
   // an adapter to know when its input has changed, so it must be callable
   // by an outside entity.
-  void reset() { QAbstractItemModel::reset(); }
+  /// \sa beginResetModel, endResetModel
+  /// \deprecated
+  void reset() { QAbstractItemModel::beginResetModel(); QAbstractItemModel::endResetModel();}
+
+  // We make the beginResetModel() and endResetModel() methods public because it
+  // isn't always possible for an adapter to know when its input has changed,
+  // so it must be callable by an outside entity.
+  void beginResetModel() { QAbstractItemModel::beginResetModel(); }
+  void endResetModel() { QAbstractItemModel::endResetModel(); }
 
 
 signals:
   void modelChanged();
-  
+
 protected:
 
   // Description:

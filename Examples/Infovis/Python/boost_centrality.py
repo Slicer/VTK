@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 from vtk import *
 
 source = vtkRandomGraphSource()
@@ -6,7 +7,7 @@ source.SetNumberOfVertices(50)
 source.SetEdgeProbability(0.01)
 source.SetUseEdgeProbability(True)
 source.AllowParallelEdgesOn()
-source.AllowSelfLoopsOn() 
+source.AllowSelfLoopsOn()
 source.SetStartWithTree(True)
 
 

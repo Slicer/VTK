@@ -21,17 +21,19 @@
 # or without modification, are permitted provided that this Notice and any
 # statement of authorship are reproduced on all copies.
 
+vtk_module_export_info()
+
+include_directories(${VTK_SOURCE_DIR}/Common/Core
+  ${VTK_BINARY_DIR}/Common/Core)
+
 IF(NOT CMAKE_CROSSCOMPILING)
   ADD_EXECUTABLE(vtkParseOGLExt Tokenizer.cxx ParseOGLExt.cxx)
-  EXPORT(TARGETS vtkParseOGLExt FILE ${EXPORT_EXECUTABLES_FILE} NAMESPACE "${EXPORT_EXECUTABLES_NAMESPACE}" APPEND) 
-  IF(COMPILE_TOOLS_TARGET)
-    ADD_DEPENDENCIES(${COMPILE_TOOLS_TARGET} vtkParseOGLExt)
-  ENDIF(COMPILE_TOOLS_TARGET)
-ENDIF(NOT CMAKE_CROSSCOMPILING)
+  vtk_compile_tools_target(vtkParseOGLExt)
+ENDIF()
 
 SET(PARSEOGLEXT_EXE vtkParseOGLExt)
 
-SET(VTK_GLEXT_FILE "${CMAKE_CURRENT_SOURCE_DIR}/headers/glext.h" CACHE FILEPATH 
+SET(VTK_GLEXT_FILE "${CMAKE_CURRENT_SOURCE_DIR}/headers/glext.h" CACHE FILEPATH
   "Location of the OpenGL extensions header file (glext.h).")
 SET(VTK_GLXEXT_FILE "${CMAKE_CURRENT_SOURCE_DIR}/headers/glxext.h" CACHE FILEPATH
   "Location of the GLX extensions header file (glxext.h).")

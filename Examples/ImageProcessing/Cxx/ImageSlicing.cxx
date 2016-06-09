@@ -35,6 +35,9 @@
 #include "vtkInteractorStyleImage.h"
 #include "vtkCommand.h"
 #include "vtkImageData.h"
+#include "vtkImageMapper3D.h"
+#include "vtkStreamingDemandDrivenPipeline.h"
+#include "vtkInformation.h"
 
 // The mouse motion callback, to turn "Slicing" on and off
 class vtkImageInteractionCallback : public vtkCommand
@@ -43,9 +46,9 @@ public:
 
   static vtkImageInteractionCallback *New() {
     return new vtkImageInteractionCallback; };
- 
+
   vtkImageInteractionCallback() {
-    this->Slicing = 0; 
+    this->Slicing = 0;
     this->ImageReslice = 0;
     this->Interactor = 0; };
 
@@ -69,7 +72,7 @@ public:
     interactor->GetLastEventPosition(lastPos);
     int currPos[2];
     interactor->GetEventPosition(currPos);
-    
+
     if (event == vtkCommand::LeftButtonPressEvent)
       {
       this->Slicing = 1;
@@ -87,7 +90,7 @@ public:
         // Increment slice position by deltaY of mouse
         int deltaY = lastPos[1] - currPos[1];
 
-        reslice->GetOutput()->UpdateInformation();
+        reslice->Update();
         double sliceSpacing = reslice->GetOutput()->GetSpacing()[2];
         vtkMatrix4x4 *matrix = reslice->GetResliceAxes();
         // move the center point that we are slicing through
@@ -114,9 +117,9 @@ public:
         }
       }
     };
- 
-private: 
-  
+
+private:
+
   // Actions (slicing only, for now)
   int Slicing;
 
@@ -148,18 +151,20 @@ int main (int argc, char *argv[])
   reader->UpdateWholeExtent();
 
   // Calculate the center of the volume
-  reader->GetOutput()->UpdateInformation();
+  reader->Update();
   int extent[6];
   double spacing[3];
   double origin[3];
-  reader->GetOutput()->GetWholeExtent(extent);
+
+
+  reader->GetOutputInformation(0)->Get(vtkStreamingDemandDrivenPipeline::WHOLE_EXTENT(), extent);
   reader->GetOutput()->GetSpacing(spacing);
   reader->GetOutput()->GetOrigin(origin);
 
   double center[3];
-  center[0] = origin[0] + spacing[0] * 0.5 * (extent[0] + extent[1]); 
-  center[1] = origin[1] + spacing[1] * 0.5 * (extent[2] + extent[3]); 
-  center[2] = origin[2] + spacing[2] * 0.5 * (extent[4] + extent[5]); 
+  center[0] = origin[0] + spacing[0] * 0.5 * (extent[0] + extent[1]);
+  center[1] = origin[1] + spacing[1] * 0.5 * (extent[2] + extent[3]);
+  center[2] = origin[2] + spacing[2] * 0.5 * (extent[4] + extent[5]);
 
   // Matrices for axial, coronal, sagittal, oblique view orientations
   //static double axialElements[16] = {
@@ -221,7 +226,7 @@ int main (int argc, char *argv[])
   // Display the image
   vtkSmartPointer<vtkImageActor> actor =
     vtkSmartPointer<vtkImageActor>::New();
-  actor->SetInput(color->GetOutput());
+  actor->GetMapper()->SetInputConnection(color->GetOutputPort());
 
   vtkSmartPointer<vtkRenderer> renderer =
     vtkSmartPointer<vtkRenderer>::New();

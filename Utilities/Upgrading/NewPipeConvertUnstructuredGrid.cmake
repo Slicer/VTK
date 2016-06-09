@@ -4,7 +4,7 @@
 
 IF (NOT DEFINED CLASS)
   MESSAGE ("You did not specify the class to process. Usage: cmake -DCLASS=vtkMyClass -P NewPipeConvertUnstructuredGrid" FATAL_ERROR)
-ENDIF (NOT DEFINED CLASS)
+ENDIF ()
 
 FILE (GLOB H_FILE ${CLASS}.h)
 FILE (GLOB CXX_FILE ${CLASS}.cxx)
@@ -17,28 +17,28 @@ FILE (READ ${CXX_FILE} CXX_CONTENTS)
 # First do the H file
 #================================================================
 
-STRING (REGEX REPLACE 
-  "vtkUnstructuredGridSource" 
+STRING (REGEX REPLACE
+  "vtkUnstructuredGridSource"
   "vtkUnstructuredGridAlgorithm"
   H_CONTENTS "${H_CONTENTS}")
 
-STRING (REGEX REPLACE 
-  "vtkUnstructuredGridToUnstructuredGridFilter" 
+STRING (REGEX REPLACE
+  "vtkUnstructuredGridToUnstructuredGridFilter"
   "vtkUnstructuredGridAlgorithm"
   H_CONTENTS "${H_CONTENTS}")
 
-STRING (REGEX REPLACE 
-  "vtkDataSetToUnstructuredGridFilter" 
+STRING (REGEX REPLACE
+  "vtkDataSetToUnstructuredGridFilter"
   "vtkUnstructuredGridAlgorithm"
   H_CONTENTS "${H_CONTENTS}")
 
-STRING (REGEX REPLACE 
-  "vtkStructuredPointsToUnstructuredGridFilter" 
+STRING (REGEX REPLACE
+  "vtkStructuredPointsToUnstructuredGridFilter"
   "vtkUnstructuredGridAlgorithm"
   H_CONTENTS "${H_CONTENTS}")
 
-STRING (REGEX REPLACE 
-  "vtkGenericDataSetToUnstructuredGridFilter" 
+STRING (REGEX REPLACE
+  "vtkGenericDataSetToUnstructuredGridFilter"
   "vtkUnstructuredGridAlgorithm"
   H_CONTENTS "${H_CONTENTS}")
 
@@ -82,11 +82,11 @@ STRING (REGEX REPLACE
 IF ("${CXX_CONTENTS}" MATCHES ".*vtkInformation.*")
   # do not do these replacements multiple times
   IF (NOT "${CXX_CONTENTS}" MATCHES ".*vtkInformation.h.*")
-    STRING (REGEX REPLACE  
+    STRING (REGEX REPLACE
       "vtkObjectFactory.h"
       "vtkInformation.h\"\n#include \"vtkInformationVector.h\"\n#include \"vtkObjectFactory.h"
       CXX_CONTENTS "${CXX_CONTENTS}")
-  ENDIF (NOT "${CXX_CONTENTS}" MATCHES ".*vtkInformation.h.*")
-ENDIF ("${CXX_CONTENTS}" MATCHES ".*vtkInformation.*")
+  ENDIF ()
+ENDIF ()
 
 FILE (WRITE ${CXX_FILE} "${CXX_CONTENTS}")

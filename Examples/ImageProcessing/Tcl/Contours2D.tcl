@@ -5,7 +5,7 @@
 package require vtk
 package require vtkinteraction
 
-# Quadric definition. This is a type of implicit function. Here the 
+# Quadric definition. This is a type of implicit function. Here the
 # coefficients to the equations are set.
 vtkQuadric quadric
   quadric SetCoefficients .5 1 .2 0 .1 0 0 .2 0 0
@@ -68,7 +68,8 @@ ren1 AddActor outlineActor
 ren1 ResetCamera
 [ren1 GetActiveCamera] Zoom 1.5
 iren AddObserver UserEvent {wm deiconify .vtkInteract}
-iren Initialize;
+iren Initialize
+iren Start
 
 # Don't show the root Tk window "."
 wm withdraw .

@@ -3,7 +3,7 @@
 
 // Included by octree
 
-#include <vtkstd/iterator>
+#include <iterator>
 
 /**\brief An octree iterator.
   *
@@ -25,7 +25,7 @@ public:
   typedef typename O_::octree_node_reference octree_node_reference;
   typedef typename O_::octree_node_pointer octree_node_pointer;
 
-  typedef vtkstd::bidirectional_iterator_tag iterator_category;
+  typedef std::bidirectional_iterator_tag iterator_category;
 
   typedef octree_iterator< T_, T_&, T_*, O_, O_*, d_ > iterator;
   typedef octree_iterator< T_, const T_&, const T_*, O_, const O_*, d_ > const_iterator;
@@ -37,18 +37,12 @@ public:
   octree_iterator();
   octree_iterator( octree_node_pointer oroot, octree_node_pointer onode, bool only_leaves = true );
   octree_iterator( const const_iterator& it );
-  ~octree_iterator();
 
   octree_node_pointer check_incr();
   octree_node_pointer check_decr();
   void immediate_family( bool state );
   bool immediate_family() const { return this->_M_immediate_family; }
   bool& immediate_family() { return this->_M_immediate_family; }
-
-  virtual self_iterator& operator = ( const iterator& it );
-#if ! ( defined(_MSC_VER) && (_MSC_VER < 1300) )
-  virtual self_iterator& operator = ( const const_iterator& it );
-#endif
 
   self_iterator& operator ++ ()      { this->_M_current_node = check_incr(); return *this; }
   self_iterator  operator ++ ( int ) { self_iterator tmp = *this; this->_M_current_node = check_incr(); return tmp; }

@@ -1,23 +1,16 @@
-#
-# Find the native HDF5 includes and library
-#
-# HDF5_INCLUDE_DIR - where to find H5public.h, etc.
-# HDF5_LIBRARIES   - List of fully qualified libraries to link against when using hdf5.
-# HDF5_FOUND       - Do not attempt to use hdf5 if "no" or undefined.
+# This extends CMake's FindHDF5.cmake to add support to include MPI include
+# paths and libraries in the HDF5 ones if HDF5_IS_PARALLEL is ON
+# (BUG #0014363).
 
-FIND_PATH(HDF5_INCLUDE_DIR H5public.h
-  /usr/local/include
-  /usr/include
-)
+# include the default FindHDF5.cmake.
+include(${CMAKE_ROOT}/Modules/FindHDF5.cmake)
 
-FIND_LIBRARY(HDF5_LIBRARY hdf5
-  /usr/local/lib
-  /usr/lib
-)
-
-IF(HDF5_INCLUDE_DIR)
-  IF(HDF5_LIBRARY)
-    SET( HDF5_LIBRARIES ${HDF5_LIBRARY} )
-    SET( HDF5_FOUND "YES" )
-  ENDIF(HDF5_LIBRARY)
-ENDIF(HDF5_INCLUDE_DIR)
+if(HDF5_FOUND AND (HDF5_IS_PARALLEL OR HDF5_ENABLE_PARALLEL))
+  include(vtkMPI)
+  if(MPI_C_INCLUDE_PATH)
+    list(APPEND HDF5_INCLUDE_DIRS ${MPI_C_INCLUDE_PATH})
+  endif()
+  if(MPI_C_LIBRARIES)
+    list(APPEND HDF5_LIBRARIES ${MPI_C_LIBRARIES})
+  endif()
+endif()

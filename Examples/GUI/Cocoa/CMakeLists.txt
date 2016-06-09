@@ -3,16 +3,19 @@
 #--  All rights reserved.
 #--  BSD License: http://www.opensource.org/licenses/bsd-license.html
 #--////////////////////////////////////////////////////////////////////////////
+CMAKE_MINIMUM_REQUIRED(VERSION 2.8.5 FATAL_ERROR)
+if(POLICY CMP0025)
+  cmake_policy(SET CMP0025 NEW) # CMake 3.0
+endif()
 project(SimpleCocoaVTK)
-CMAKE_MINIMUM_REQUIRED(VERSION 2.6.3 FATAL_ERROR)
 
 if(NOT VTK_BINARY_DIR)
   find_package(VTK)
   if(NOT VTK_DIR)
     message(FATAL_ERROR "Please set VTK_DIR.")
-  endif(NOT VTK_DIR)
+  endif()
   include(${VTK_USE_FILE})
-endif(NOT VTK_BINARY_DIR)
+endif()
 
 # This is needed in case we are building this project separate from the VTK build
 if (NOT EXECUTABLE_OUTPUT_PATH)
@@ -52,7 +55,8 @@ set(MACOSX_BUNDLE_NSPRINCIPAL_CLASS "NSApplication")
 add_executable(SimpleCocoaVTK MACOSX_BUNDLE ${SimpleCocoaVTK_SRCS} ${SimpleCocoaVTK_HDRS})
 
 # Probably a better way to set the framework link libraries.
-target_link_libraries(SimpleCocoaVTK vtkRendering "-framework Cocoa -framework OpenGL -framework IOKit")
+target_link_libraries(SimpleCocoaVTK "-framework Cocoa -framework OpenGL"
+                      vtkRenderingOpenGL vtkInteractionStyle )
 
 # Set a custom plist file for the app bundle
 set_target_properties(SimpleCocoaVTK PROPERTIES MACOSX_BUNDLE_INFO_PLIST ${SimpleCocoaVTK_SOURCE_DIR}/Info-CMake.plist)

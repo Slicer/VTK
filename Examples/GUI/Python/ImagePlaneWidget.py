@@ -32,7 +32,7 @@ v16.SetImageRange(1, 93)
 v16.SetDataSpacing(3.2, 3.2, 1.5)
 v16.Update()
 
-xMin, xMax, yMin, yMax, zMin, zMax = v16.GetOutput().GetWholeExtent()
+xMin, xMax, yMin, yMax, zMin, zMax = v16.GetExecutive().GetWholeExtent(v16.GetOutputInformation(0))
 
 spacing = v16.GetOutput().GetSpacing()
 sx, sy, sz = spacing
@@ -58,7 +58,7 @@ picker.SetTolerance(0.005)
 # The 3 image plane widgets are used to probe the dataset.
 planeWidgetX = vtk.vtkImagePlaneWidget()
 planeWidgetX.DisplayTextOn()
-planeWidgetX.SetInput(v16.GetOutput())
+planeWidgetX.SetInputConnection(v16.GetOutputPort())
 planeWidgetX.SetPlaneOrientationToXAxes()
 planeWidgetX.SetSliceIndex(32)
 planeWidgetX.SetPicker(picker)
@@ -68,7 +68,7 @@ prop1.SetColor(1, 0, 0)
 
 planeWidgetY = vtk.vtkImagePlaneWidget()
 planeWidgetY.DisplayTextOn()
-planeWidgetY.SetInput(v16.GetOutput())
+planeWidgetY.SetInputConnection(v16.GetOutputPort())
 planeWidgetY.SetPlaneOrientationToYAxes()
 planeWidgetY.SetSliceIndex(32)
 planeWidgetY.SetPicker(picker)
@@ -82,7 +82,7 @@ planeWidgetY.SetLookupTable(planeWidgetX.GetLookupTable())
 # cross-hair cursor snapping to pixel centers
 planeWidgetZ = vtk.vtkImagePlaneWidget()
 planeWidgetZ.DisplayTextOn()
-planeWidgetZ.SetInput(v16.GetOutput())
+planeWidgetZ.SetInputConnection(v16.GetOutputPort())
 planeWidgetZ.SetPlaneOrientationToZAxes()
 planeWidgetZ.SetSliceIndex(46)
 planeWidgetZ.SetPicker(picker)
@@ -130,7 +130,7 @@ def AlignCamera():
         vy = 1
         nz = oz+zMax*sz
         cz = oz+slice_number*sz
- 
+
     px = cx+nx*2
     py = cy+ny*2
     pz = cz+nz*3
@@ -142,7 +142,7 @@ def AlignCamera():
     camera.OrthogonalizeViewUp()
     ren.ResetCameraClippingRange()
     renWin.Render()
- 
+
 # Capture the display and place in a tiff
 def CaptureImage():
     w2i = vtk.vtkWindowToImageFilter()
@@ -153,7 +153,7 @@ def CaptureImage():
     writer.SetFileName("image.tif")
     renWin.Render()
     writer.Write()
- 
+
 
 # Align the widget back into orthonormal position,
 # set the slider to reflect the widget's position,
@@ -167,13 +167,13 @@ def AlignXaxis():
         planeWidgetX.SetSliceIndex(slice_number)
     else:
         slice_number = planeWidgetX.GetSliceIndex()
- 
+
     current_widget = planeWidgetX
 
     slice.config(from_=xMin, to=xMax)
     slice.set(slice_number)
     AlignCamera()
- 
+
 
 def AlignYaxis():
     global yMin, yMax, current_widget, slice_number
@@ -184,13 +184,13 @@ def AlignYaxis():
         planeWidgetY.SetSliceIndex(slice_number)
     else:
         slice_number = planeWidgetY.GetSliceIndex()
- 
+
     current_widget = planeWidgetY
 
     slice.config(from_=yMin, to=yMax)
     slice.set(slice_number)
     AlignCamera()
- 
+
 def AlignZaxis():
     global yMin, yMax, current_widget, slice_number
     po = planeWidgetZ.GetPlaneOrientation()
@@ -200,7 +200,7 @@ def AlignZaxis():
         planeWidgetZ.SetSliceIndex(slice_number)
     else:
         slice_number = planeWidgetZ.GetSliceIndex()
- 
+
     current_widget = planeWidgetZ
 
     slice.config(from_=zMin, to=zMax)
@@ -216,7 +216,7 @@ def SetInterpolation():
         mode_widget.TextureInterpolateOff()
     else:
         mode_widget.TextureInterpolateOn()
- 
+
     mode_widget.SetResliceInterpolate(mode.get())
     renWin.Render()
 
@@ -235,7 +235,7 @@ def buttonEvent(event, arg=None):
     mode.set(mode_widget.GetResliceInterpolate())
     popm.entryconfigure(arg, variable=mode)
     popm.post(event.x + event.x_root, event.y + event.y_root)
-        
+
 def SetSlice(sl):
     global current_widget
     current_widget.SetSliceIndex(int(sl))
@@ -305,7 +305,7 @@ slice = Tkinter.Scale(top, from_=zMin, to=zMax, orient="horizontal",
                       label="Slice")
 slice.pack(fill="x", expand="false")
 
-# Done with the GUI. 
+# Done with the GUI.
 ###
 
 # Set the interactor for the widgets

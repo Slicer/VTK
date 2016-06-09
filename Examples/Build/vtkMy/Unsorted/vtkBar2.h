@@ -16,8 +16,8 @@
 // .SECTION Description
 // None.
 
-#ifndef __vtkBar2_h
-#define __vtkBar2_h
+#ifndef vtkBar2_h
+#define vtkBar2_h
 
 #include "vtkObject.h"
 #include "vtkmyUnsortedWin32Header.h"
@@ -29,11 +29,11 @@ public:
   vtkTypeMacro(vtkBar2,vtkObject);
 
 protected:
-  vtkBar2() {};
-  ~vtkBar2() {};
+  vtkBar2() {}
+  ~vtkBar2() {}
 private:
   vtkBar2(const vtkBar2&);  // Not implemented.
   void operator=(const vtkBar2&);  // Not implemented.
 };
 
-#endif 
+#endif

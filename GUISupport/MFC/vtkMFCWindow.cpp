@@ -13,9 +13,9 @@
 
 =========================================================================*/
 
-// Allow use of features specific to Windows 95 and Windows NT 4 or later.
+// 0x0501 means target Windows XP or later
 #ifndef WINVER
-#define WINVER 0x0400
+#define WINVER 0x0501
 #endif
 
 // Define _WIN32_WINNT and _WIN32_IE to avoid the following error with Visual
@@ -25,7 +25,7 @@
 // setting"
 
 #ifndef _WIN32_WINNT
-#define _WIN32_WINNT 0x0400 // =_WIN32_WINNT_NT4
+#define _WIN32_WINNT 0x0501 // 0x0501 means target Windows XP or later
 #endif
 #ifndef _WIN32_IE
 #define _WIN32_IE 0x0601 //=_WIN32_IE_IE60SP1
@@ -86,7 +86,7 @@ vtkMFCWindow::vtkMFCWindow(CWnd *pcWnd)
   if(pcWnd)
     style |= WS_CHILD;
   BOOL bCreated = CWnd::Create(NULL, _T("VTK-MFC Window"),
-                               style, CRect(0, 0, 1, 1), 
+                               style, CRect(0, 0, 1, 1),
                                pcWnd, (UINT)IDC_STATIC);
 
   SUCCEEDED(bCreated);
@@ -192,14 +192,14 @@ void vtkMFCWindow::DrawDC(CDC* pDC)
   this->pvtkWin32OpenGLRW->ResumeScreenRendering();
 }
 
-void vtkMFCWindow::OnSize(UINT nType, int cx, int cy) 
+void vtkMFCWindow::OnSize(UINT nType, int cx, int cy)
 {
   CWnd::OnSize(nType, cx, cy);
   if (this->GetInteractor() && this->GetInteractor()->GetInitialized())
     this->GetInteractor()->UpdateSize(cx, cy);
 }
 
-BOOL vtkMFCWindow::OnEraseBkgnd(CDC*) 
+BOOL vtkMFCWindow::OnEraseBkgnd(CDC*)
 {
   return TRUE;
 }

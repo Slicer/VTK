@@ -2,7 +2,7 @@
 # It creates random points and connects them with a spline
 
 #
-# First we include the VTK Tcl packages which will make available 
+# First we include the VTK Tcl packages which will make available
 # all of the vtk commands to Tcl
 #
 package require vtk
@@ -20,7 +20,7 @@ vtkCardinalSpline aSplineX
 vtkCardinalSpline aSplineY
 vtkCardinalSpline aSplineZ
 
-# Generate random (pivot) points and add the corresponding 
+# Generate random (pivot) points and add the corresponding
 # coordinates to the splines.
 # aSplineX will interpolate the x values of the points
 # aSplineY will interpolate the y values of the points
@@ -50,8 +50,8 @@ balls SetPhiResolution 10
 balls SetThetaResolution 10
 
 vtkGlyph3D glyphPoints
-glyphPoints SetInput inputData
-glyphPoints SetSource [balls GetOutput]
+glyphPoints SetInputData inputData
+glyphPoints SetSourceConnection [balls GetOutputPort]
 
 vtkPolyDataMapper glyphMapper
 glyphMapper SetInputConnection [glyphPoints GetOutputPort]
@@ -88,7 +88,7 @@ profileData SetLines lines
 # Add thickness to the resulting line.
 vtkTubeFilter profileTubes
 profileTubes SetNumberOfSides 8
-profileTubes SetInput profileData
+profileTubes SetInputData profileData
 profileTubes SetRadius .005
 
 vtkPolyDataMapper profileMapper
@@ -123,5 +123,5 @@ iren AddObserver UserEvent {wm deiconify .vtkInteract}
 
 # prevent the tk window from showing up
 wm withdraw .
-
+iren Start
 

@@ -1,4 +1,5 @@
 import sys, os, string
+import vtkCommonCorePython
 
 def vtkLoadPythonTkWidgets(interp):
     """vtkLoadPythonTkWidgets(interp) -- load vtk-tk widget extensions
@@ -7,12 +8,23 @@ def vtkLoadPythonTkWidgets(interp):
     shared object file that contains the python-vtk-tk widgets.  Both
     the python path and the tcl path are searched.
     """
-    name = 'vtkRenderingPythonTkWidgets'
-    pkgname = string.capitalize(string.lower(name))
+    X = vtkCommonCorePython.vtkVersion.GetVTKMajorVersion()
+    Y = vtkCommonCorePython.vtkVersion.GetVTKMinorVersion()
+    modname = 'vtkRenderingPythonTkWidgets'
+    name = '%s-%d.%d' % (modname,X,Y)
+    pkgname = string.capitalize(string.lower(modname))
 
-    # find out if the file is already loaded
-    loaded = interp.call('info', 'loaded')
-    if string.find(loaded, pkgname) >= 0:
+    # find out if the module is already loaded
+    loadedpkgs = interp.call('info', 'loaded')
+    found = False
+    try:
+        # check for result returned as a string
+        found = (loadedpkgs.find(pkgname) >= 0)
+    except AttributeError:
+        # check for result returned as nested tuples
+        for pkgtuple in loadedpkgs:
+            found |= (pkgname in pkgtuple)
+    if found:
         return
 
     # create the platform-dependent file name
@@ -51,8 +63,8 @@ def vtkLoadPythonTkWidgets(interp):
         try:
             # If the path object is not str, it means that it is a
             # Tkinter path object.
-            if type(path) != str:
-              path = path.string
+            if (not isinstance(path, str) and not isinstance(path, unicode)):
+                path = path.string
             # try block needed when one uses Gordon McMillan's Python
             # Installer.
             if len(path) > 0 and path[0] == '{' and path[-1] == '}':
@@ -66,4 +78,4 @@ def vtkLoadPythonTkWidgets(interp):
             return
 
     # re-generate the error
-    interp.call('load', filename)
+    interp.call('load', filename, pkgname)
