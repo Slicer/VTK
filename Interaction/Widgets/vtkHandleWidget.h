@@ -102,6 +102,11 @@ public:
   vtkGetMacro( EnableAxisConstraint, int );
   vtkBooleanMacro( EnableAxisConstraint, int );
 
+  // Enable moving of handles. By default, the handle can be moved.
+  vtkSetMacro(EnableTranslation, int);
+  vtkGetMacro(EnableTranslation, int);
+  vtkBooleanMacro(EnableTranslation, int);
+
   // Description:
   // Allow resizing of handles ? By default the right mouse button scales
   // the handle size.
@@ -134,6 +139,7 @@ protected:
 
   int WidgetState;
   int EnableAxisConstraint;
+  int EnableTranslation;
 
   // Allow resizing of handles.
   int AllowHandleResize;
