@@ -280,9 +280,6 @@ void vtkOpenVRRenderWindow::RenderModels()
   vtkOpenGLState *ostate = this->GetState();
   ostate->glEnable(GL_DEPTH_TEST);
 
-  bool bIsInputCapturedByAnotherProcess =
-    this->HMD->IsInputFocusCapturedByAnotherProcess();
-
   // for each device
   for (uint32_t unTrackedDevice = vr::k_unTrackedDeviceIndex_Hmd + 1;
        unTrackedDevice < vr::k_unMaxTrackedDeviceCount; unTrackedDevice++ )
@@ -313,12 +310,6 @@ void vtkOpenVRRenderWindow::RenderModels()
     // is the model's pose not valid?
     const vr::TrackedDevicePose_t &pose = this->TrackedDevicePose[ unTrackedDevice ];
     if( !pose.bPoseIsValid )
-    {
-      continue;
-    }
-
-    if( bIsInputCapturedByAnotherProcess &&
-        this->HMD->GetTrackedDeviceClass( unTrackedDevice ) == vr::TrackedDeviceClass_Controller )
     {
       continue;
     }
@@ -481,7 +472,7 @@ void vtkOpenVRRenderWindow::Render()
 
 void vtkOpenVRRenderWindow::StereoUpdate()
 {
-  // camera handles what we need
+  glBindFramebuffer( GL_FRAMEBUFFER, this->GetLeftRenderBufferId());
 }
 
 void vtkOpenVRRenderWindow::StereoMidpoint()
@@ -504,6 +495,7 @@ void vtkOpenVRRenderWindow::StereoMidpoint()
     vr::Texture_t leftEyeTexture = {(void*)(long)this->LeftEyeDesc.m_nResolveTextureId, vr::TextureType_OpenGL, vr::ColorSpace_Gamma };
     vr::VRCompositor()->Submit(vr::Eye_Left, &leftEyeTexture );
   }
+  glBindFramebuffer( GL_FRAMEBUFFER, this->GetRightRenderBufferId());
 }
 
 void  vtkOpenVRRenderWindow::StereoRenderComplete()
