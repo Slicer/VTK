@@ -143,7 +143,7 @@ void vtkPythonCommand::Execute(vtkObject *ptr, unsigned long eventtype,
     {
       long callDataTypeLong = PyInt_AsLong(callDataTypeObj);
       int invalid = (callDataTypeLong == -1) && PyErr_Occurred();
-      if (!invalid)
+      if (!invalid && callData != nullptr)
       {
         if (callDataTypeLong == VTK_STRING)
         {
