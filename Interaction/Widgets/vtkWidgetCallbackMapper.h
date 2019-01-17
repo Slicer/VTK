@@ -95,7 +95,7 @@ public:
    * This method invokes the callback given a widget event. A non-zero value
    * is returned if the listed event is registered.
    */
-  void InvokeCallback(unsigned long widgetEvent);
+  void InvokeCallback(unsigned long widgetEvent, int selectionButton);
 
 protected:
   vtkWidgetCallbackMapper();

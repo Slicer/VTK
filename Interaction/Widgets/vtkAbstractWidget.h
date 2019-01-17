@@ -158,6 +158,27 @@ public:
    */
   void SetPriority( float ) override;
 
+  // The button used to select the widget
+  enum
+  {
+    Ignore = -1,
+    None = 0,
+    LeftButton = 1,
+    MiddleButton = 2,
+    RightButton = 4,
+    LeftButtonDoubleClick = 8,
+    MiddleButtonDoubleClick = 16,
+    RightButtonDoubleClick = 32
+  };
+
+  //@{
+  /**
+   * Set/Get the button used to select the widget.
+   */
+  vtkSetMacro( SelectionButton, int );
+  vtkGetMacro( SelectionButton, int );
+  //@}
+
 protected:
   vtkAbstractWidget();
   ~vtkAbstractWidget() override;
@@ -165,6 +186,9 @@ protected:
   // Handles the events; centralized here for all widgets.
   static void ProcessEventsHandler(vtkObject* object, unsigned long event,
                             void* clientdata, void* calldata);
+
+  // Return the corrispective Selection button ID from a vtk click event
+  static int MapVTKClickEventToSelectionButton(unsigned long VTKEvent);
 
   // The representation for the widget. This is typically called by the
   // SetRepresentation() methods particular to each widget (i.e. subclasses
@@ -192,6 +216,9 @@ protected:
   // Flag indicating if the widget should handle interaction events.
   // On by default.
   vtkTypeBool ProcessEvents;
+
+  // Button used to select the widget
+  int SelectionButton;
 
 private:
   vtkAbstractWidget(const vtkAbstractWidget&) = delete;

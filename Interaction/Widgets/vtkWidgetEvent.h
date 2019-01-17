@@ -49,6 +49,7 @@ public:
     NoEvent = 0,
     Select,
     EndSelect,
+    Pick,
     Delete,
     Translate,
     EndTranslate,

@@ -121,12 +121,16 @@ void vtkWidgetCallbackMapper::SetCallbackMethod(unsigned long widgetEvent,
 }
 
 //----------------------------------------------------------------------------
-void vtkWidgetCallbackMapper::InvokeCallback(unsigned long widgetEvent)
+void vtkWidgetCallbackMapper::InvokeCallback(unsigned long widgetEvent, int selectionButton)
 {
   vtkCallbackMap::CallbackMapIterator iter = this->CallbackMap->find(widgetEvent);
   if ( iter != this->CallbackMap->end() )
   {
     vtkAbstractWidget *w = (*iter).second.Widget;
+    if ( selectionButton != vtkAbstractWidget::Ignore )
+    {
+      w->SetSelectionButton(selectionButton);
+    }
     CallbackType f = (*iter).second.Callback;
     (*f)(w);
   }

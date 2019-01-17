@@ -258,10 +258,13 @@ void vtkAbstractWidget::ProcessEventsHandler(vtkObject* vtkNotUsed(object),
   // Save the call data for widgets if needed
   self->CallData = calldata;
 
+  // Selection button
+  int selectionButton = vtkAbstractWidget::MapVTKClickEventToSelectionButton(vtkEvent);
+
   // Invoke the widget callback
   if ( widgetEvent != vtkWidgetEvent::NoEvent)
   {
-    self->CallbackMapper->InvokeCallback(widgetEvent);
+    self->CallbackMapper->InvokeCallback(widgetEvent, selectionButton);
   }
 }
 
@@ -333,6 +336,47 @@ void vtkAbstractWidget::SetPriority( float f )
     }
   }
 }
+
+//----------------------------------------------------------------------
+int vtkAbstractWidget::MapVTKClickEventToSelectionButton(unsigned long VTKEvent)
+{
+  if ( VTKEvent == vtkCommand::LeftButtonPressEvent ||
+       VTKEvent == vtkCommand::LeftButtonReleaseEvent )
+  {
+    return vtkAbstractWidget::LeftButton;
+  }
+  else if ( VTKEvent == vtkCommand::MiddleButtonPressEvent ||
+            VTKEvent == vtkCommand::MiddleButtonReleaseEvent )
+  {
+    return vtkAbstractWidget::MiddleButton;
+  }
+  else if ( VTKEvent == vtkCommand::RightButtonPressEvent ||
+            VTKEvent == vtkCommand::RightButtonReleaseEvent )
+  {
+    return vtkAbstractWidget::RightButton;
+  }
+  else if ( VTKEvent == vtkCommand::LeftButtonDoubleClickEvent )
+  {
+    return vtkAbstractWidget::LeftButtonDoubleClick;
+  }
+  else if ( VTKEvent == vtkCommand::MiddleButtonDoubleClickEvent )
+  {
+    return vtkAbstractWidget::MiddleButtonDoubleClick;
+  }
+  else if ( VTKEvent == vtkCommand::RightButtonDoubleClickEvent )
+  {
+    return vtkAbstractWidget::RightButtonDoubleClick;
+  }
+  else if ( VTKEvent == vtkCommand::MouseMoveEvent ||
+            VTKEvent == vtkCommand::MouseWheelBackwardEvent ||
+            VTKEvent == vtkCommand::MouseWheelForwardEvent )
+  {
+    return vtkAbstractWidget::Ignore;
+  }
+
+  return vtkAbstractWidget::None;
+}
+
 
 //----------------------------------------------------------------------
 void vtkAbstractWidget::PrintSelf(ostream& os, vtkIndent indent)

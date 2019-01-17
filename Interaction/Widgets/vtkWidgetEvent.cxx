@@ -21,6 +21,7 @@ static const char *vtkWidgetEventStrings[] = {
   "NoEvent",
   "Select",
   "EndSelect",
+  "Pick",
   "Delete",
   "Translate",
   "EndTranslate",
