@@ -123,8 +123,8 @@ foreach(_CURRENT_VERSION ${_Python_VERSIONS})
 
     # Use the library's install prefix as a hint
     set(_Python_INCLUDE_PATH_HINT)
-    get_filename_component(_Python_PREFIX ${PYTHON_LIBRARY} PATH)
-    get_filename_component(_Python_PREFIX ${_Python_PREFIX} PATH)
+    get_filename_component(_Python_PREFIX "${PYTHON_LIBRARY}" PATH)
+    get_filename_component(_Python_PREFIX "${_Python_PREFIX}" PATH)
     if(_Python_PREFIX)
       set(_Python_INCLUDE_PATH_HINT ${_Python_PREFIX}/include)
     endif()
