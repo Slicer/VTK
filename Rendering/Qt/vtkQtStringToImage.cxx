@@ -31,6 +31,7 @@
 #include <QFontMetrics>
 #include <QImage>
 #include <QPainter>
+#include <QPainterPath>
 #include <QPixmap>
 #include <QTextDocument>
 #include <QTextStream>
