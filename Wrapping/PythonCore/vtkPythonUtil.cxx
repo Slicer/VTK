@@ -1031,15 +1031,15 @@ bool vtkPythonUtil::ImportModule(const char* fullname, PyObject* globals)
 
   PyObject* m = nullptr;
 
-  if (fullname == name || (fullname[0] == '.' && &fullname[1] == name))
-  {
-    // try relative import
-    m = PyImport_ImportModuleLevel(name, globals, nullptr, nullptr, 1);
-    if (!m)
-    {
-      PyErr_Clear();
-    }
-  }
+//  if (fullname == name || (fullname[0] == '.' && &fullname[1] == name))
+//  {
+//    // try relative import
+//    m = PyImport_ImportModuleLevel(name, globals, nullptr, nullptr, 1);
+//    if (!m)
+//    {
+//      PyErr_Clear();
+//    }
+//  }
 
   if (!m)
   {
