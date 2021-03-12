@@ -20,7 +20,7 @@ where:
 
 * `vX.Y.Z` is the version of the forked project
 * `YYYY-MM-DD` is the date of the last official commit associated with the branch.
-* `SHA{7}` are the first seven characters of the last official commit associated with the branch.
+* `SHA{9}` are the first seven characters of the last official commit associated with the branch.
 
 For more details, see https://www.slicer.org/wiki/Documentation/Nightly/Developers/ProjectForks
 
@@ -30,23 +30,33 @@ How to backport changes to a specific branch ?
 
 1. Fork `Slicer/VTK`
 
-2. Checkout the relevant `slicer-vX.Y.Z-YYYY-MM-DD-SHA{7}` branch
+2. Checkout the relevant `slicer-vX.Y.Z-YYYY-MM-DD-SHA{9}` branch. See [SuperBuild/External_VTK.cmake](https://github.com/Slicer/Slicer/blob/master/SuperBuild/External_VTK.cmake) to identify the name of the branch.
 
 3. Add the remote from which to cherry-pick commit from
 
 4. Cherry-pick the commit(s)
 
-5. Amend the commit updating title and message to include `[backport MR-1234]` and `Cherry-picked commit ...` information:
+5. Amend the commit updating title and message to include `[backport MR-1234]` and `Cherry-picked commit ...` information.
 
-```
-[backport MR-6941] Fix infinite loop in vtkContourTriangulator 
+    ```
+    [Backport MR-7480] Simplify coincident topology resolution
+        
+    See https://gitlab.kitware.com/vtk/vtk/-/merge_requests/7480/diffs?commit_id=03e2ac53aba58a0a060d77e12d4893230c146e1b
 
-Cherry-picked commit a93fff6 from main VTK repository.
+    ...
+    ```
 
-...
-```
+    Or if the change has already been integrated into the upstream repository:
 
-6. Finally, share your updated branch with the Slicer development team on discourse
+    ```
+    [backport] Fix infinite loop in vtkContourTriangulator 
+
+    Cherry-picked commit a93fff6 from main VTK repository.
+
+    ...
+    ```
+
+6. Finally, create a pull request against the relevant `slicer-vX.Y.Z-YYYY-MM-DD-SHA{9}` branch.
 
 
 _Note: If you have push access to the `Slicer/VTK` fork, you could directly push commit to the relevant branch_
