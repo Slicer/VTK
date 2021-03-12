@@ -38,6 +38,8 @@ How to backport changes to a specific branch ?
 
 5. Amend the commit updating title and message to include `[backport MR-1234]` and `Cherry-picked commit ...` information.
 
+    Adding these details streamlines the creation of new `slicer-` branch allowing to easily identify which commits are specific to Slicer and which ones have been backported.
+
     ```
     [Backport MR-7480] Simplify coincident topology resolution
         
