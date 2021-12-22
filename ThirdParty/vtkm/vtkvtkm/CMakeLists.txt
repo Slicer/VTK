@@ -31,6 +31,9 @@ set(VTKm_INSTALL_CMAKE_MODULE_DIR "${VTKm_INSTALL_CONFIG_DIR}/cmake")
 # Currently VTK-m only installs its readme and license.
 set(VTKm_INSTALL_SHARE_DIR "${_vtk_build_LICENSE_DESTINATION}/vtkvtkm")
 
+set(VTKm_HEADERS_COMPONENT "${_vtk_build_HEADERS_COMPONENT}")
+set(VTKm_TARGETS_COMPONENT "${_vtk_build_TARGETS_COMPONENT}")
+
 if (_vtk_build_INSTALL_HEADERS)
   set(VTKm_INSTALL_ONLY_LIBRARIES OFF)
 else ()
