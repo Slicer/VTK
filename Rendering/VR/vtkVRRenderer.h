@@ -14,12 +14,14 @@ PURPOSE.  See the above copyright notice for more information.
 =========================================================================*/
 /**
  * @class   vtkVRRenderer
- * @brief   VR renderer
+ * @brief   Renderer class for VR/AR context.
  *
  * vtkVRRenderer is an abstract vtkRenderer class that is meant to be used in VR context.
- * It defines a floor actor with a grid fading with the distance.
+ * It defines a floor actor with a grid fading with the distance, as well as a
+ * cross-like marker that can be attached to the tip of a controller (can be
+ * used e.g. to help place points).
  *
- * Subclasses must define MakeCamera()
+ * Subclasses must define MakeCamera().
  */
 
 #ifndef vtkVRRenderer_h
@@ -78,10 +80,29 @@ public:
 
   ///@{
   /**
-   * Show the floor of the VR world
+   * Set/get whether to show a white floor corresponding to the physical floor.
+   * Default is false.
    */
-  virtual void SetShowFloor(bool);
-  virtual bool GetShowFloor() { return this->ShowFloor; }
+  virtual void SetShowFloor(bool value);
+  vtkGetMacro(ShowFloor, bool);
+  ///@}
+
+  ///@{
+  /**
+   * Set/get whether to display a white cross marker at the tip of the left controller.
+   * Default is false.
+   */
+  virtual void SetShowLeftMarker(bool value);
+  vtkGetMacro(ShowLeftMarker, bool);
+  ///@}
+
+  ///@{
+  /**
+   * Set/get whether to display a white cross marker at the tip of the right controller.
+   * Default is false.
+   */
+  virtual void SetShowRightMarker(bool value);
+  vtkGetMacro(ShowRightMarker, bool);
   ///@}
 
 protected:
@@ -94,6 +115,11 @@ protected:
 private:
   vtkVRRenderer(const vtkVRRenderer&) = delete;
   void operator=(const vtkVRRenderer&) = delete;
+
+  vtkNew<vtkActor> LeftMarkerActor;
+  vtkNew<vtkActor> RightMarkerActor;
+  bool ShowLeftMarker = false;
+  bool ShowRightMarker = false;
 };
 
 VTK_ABI_NAMESPACE_END
