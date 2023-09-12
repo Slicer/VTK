@@ -121,6 +121,7 @@
 #define VTKIS_ENV_ROTATE 19           // rotate the renderer environment texture
 #define VTKIS_GROUNDMOVEMENT 20       // horizontal movement according to the 4 directions
 #define VTKIS_ELEVATION 21            // vertical movement (up and down)
+#define VTKIS_TELEPORTATION 22        // teleportation (move instantly between two positions)
 
 #define VTKIS_ANIM_OFF 0
 #define VTKIS_ANIM_ON 1
@@ -258,6 +259,7 @@ public:
   virtual void OnPositionProp3D(vtkEventData*) {}
   virtual void OnViewerMovement3D(vtkEventData*) {}
   virtual void OnElevation3D(vtkEventData*) {}
+  virtual void OnTeleportation3D(vtkEventData*) {}
 
   /**
    * OnChar is triggered when an ASCII key is pressed. Some basic key presses
