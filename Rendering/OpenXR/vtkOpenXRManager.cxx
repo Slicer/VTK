@@ -120,6 +120,12 @@ bool vtkOpenXRManager::Initialize(vtkOpenGLRenderWindow* helperWindow)
     return false;
   }
 
+  if (!this->ConnectionStrategy->EndInitialize())
+  {
+    vtkWarningWithObjectMacro(nullptr, "Failed to terminate connection strategy initialization.");
+    return false;
+  }
+
   return true;
 }
 
