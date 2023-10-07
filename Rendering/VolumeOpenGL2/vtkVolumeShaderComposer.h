@@ -1579,7 +1579,6 @@ inline std::string ComputeLightingDeclaration(vtkRenderer* vtkNotUsed(ren), vtkV
   std::regex lightingRegex("__LIGHTING_COMPONENT__");
   shaderStr = std::regex_replace(shaderStr, lightingRegex, lightingComponent);
 
-  cerr << shaderStr;
   return shaderStr;
 }
 
