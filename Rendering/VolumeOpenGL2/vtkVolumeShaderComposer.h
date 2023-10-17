@@ -30,7 +30,6 @@
 #include <map>
 #include <sstream>
 #include <string>
-#include <regex>
 
 namespace
 {
@@ -1259,7 +1258,14 @@ inline std::string ComputeLightingDeclaration(vtkRenderer* vtkNotUsed(ren), vtkV
 
   int const transferMode = volProperty->GetTransferFunctionMode();
 
-  std::string lightingComponent = independentComponents ? "component" : "0";
+  if (independentComponents)
+  {
+    shaderStr += "\n  int lightingComponent=component;\n";
+  }
+  else
+  {
+    shaderStr += "\n  int lightingComponent=0;\n";
+  }
 
   bool const volumetricShadow = glMapper->GetVolumetricScatteringBlending() > 0.0;
   std::string volumetricCall = volumetricShadow
@@ -1330,16 +1336,16 @@ inline std::string ComputeLightingDeclaration(vtkRenderer* vtkNotUsed(ren), vtkV
   }
   if (nDotL > 0.0)
   {
-    diffuse = nDotL * in_diffuse[__LIGHTING_COMPONENT__] *
+    diffuse = nDotL * in_diffuse[lightingComponent] *
     in_lightDiffuseColor[0] * color.rgb;
     vDotR = max(vDotR, 0.0);
-    specular = pow(vDotR, in_shininess[__LIGHTING_COMPONENT__]) *
-                 in_specular[__LIGHTING_COMPONENT__] *
+    specular = pow(vDotR, in_shininess[lightingComponent]) *
+                 in_specular[lightingComponent] *
                  in_lightSpecularColor[0];
   }
   // For the headlight, ignore the light's ambient color
   // for now as it is causing the old mapper tests to fail
-  finalColor.xyz = in_ambient[__LIGHTING_COMPONENT__] * color.rgb +
+  finalColor.xyz = in_ambient[lightingComponent] * color.rgb +
                    diffuse + specular;
 
         )***";
@@ -1407,7 +1413,7 @@ inline std::string ComputeLightingDeclaration(vtkRenderer* vtkNotUsed(ren), vtkV
       }
       if (rDotV > 0.0)
       {
-        float sf = attenuation * pow(rDotV, in_shininess[__LIGHTING_COMPONENT__]);
+        float sf = attenuation * pow(rDotV, in_shininess[lightingComponent]);
         specular += (sf * in_lightSpecularColor[posNum]);
       }
     }
@@ -1433,15 +1439,15 @@ inline std::string ComputeLightingDeclaration(vtkRenderer* vtkNotUsed(ren), vtkV
       float rDotV = dot(-viewDirection, r);
       if (rDotV > 0.0)
       {
-        float sf = pow(rDotV, in_shininess[__LIGHTING_COMPONENT__]);
+        float sf = pow(rDotV, in_shininess[lightingComponent]);
         specular += (sf * in_lightSpecularColor[dirNum]);
       }
     }
     ambient += in_lightAmbientColor[dirNum];
   }
-  finalColor.xyz = in_ambient[__LIGHTING_COMPONENT__] * ambient +
-                   in_diffuse[__LIGHTING_COMPONENT__] * diffuse * color.rgb +
-                   in_specular[__LIGHTING_COMPONENT__] * specular;
+  finalColor.xyz = in_ambient[lightingComponent] * ambient +
+                   in_diffuse[lightingComponent] * diffuse * color.rgb +
+                   in_specular[lightingComponent] * specular;
 
       )***";
     }
@@ -1484,8 +1490,8 @@ inline std::string ComputeLightingDeclaration(vtkRenderer* vtkNotUsed(ren), vtkV
   tex_light = (in_inverseTextureDatasetMatrix[0] * in_inverseVolumeMatrix[0] * vec4(in_cameraPos, 1.0)).xyz;
   phase = phase_function(-1); // always angle of pi
   vol_shadow = volumeShadow(g_dataPos, tex_light, 1.0, component, in_volume[0], 0, label);
-  secondary_contrib += vol_shadow * phase * color.rgb * in_diffuse[__LIGHTING_COMPONENT__] * in_lightDiffuseColor[0];
-  secondary_contrib += in_ambient[__LIGHTING_COMPONENT__] * in_lightAmbientColor[0];
+  secondary_contrib += vol_shadow * phase * color.rgb * in_diffuse[lightingComponent] * in_lightDiffuseColor[0];
+  secondary_contrib += in_ambient[lightingComponent] * in_lightAmbientColor[0];
       )***";
     }
     else
@@ -1508,8 +1514,8 @@ inline std::string ComputeLightingDeclaration(vtkRenderer* vtkNotUsed(ren), vtkV
     attenuation *= max(0.0, sign(light_angle - cos(radians(in_lightConeAngle[posNum]))))
                      * pow(light_angle, in_lightExponent[posNum]);
     vol_shadow = volumeShadow(g_dataPos, tex_light, 1.0, component, in_volume[0], 0, label);
-    secondary_contrib += vol_shadow * phase * attenuation * color.rgb * in_diffuse[__LIGHTING_COMPONENT__] * in_lightDiffuseColor[posNum];
-    secondary_contrib += in_ambient[__LIGHTING_COMPONENT__] * in_lightAmbientColor[posNum];
+    secondary_contrib += vol_shadow * phase * attenuation * color.rgb * in_diffuse[lightingComponent] * in_lightDiffuseColor[posNum];
+    secondary_contrib += in_ambient[lightingComponent] * in_lightAmbientColor[posNum];
   }
       )***";
       }
@@ -1520,8 +1526,8 @@ inline std::string ComputeLightingDeclaration(vtkRenderer* vtkNotUsed(ren), vtkV
     tex_light = g_lightDirectionTex[dirNum];
     phase = phase_function(dot(normalize(-tex_light), view_tdir));
     vol_shadow = volumeShadow(g_dataPos, tex_light, 0.0, component, in_volume[0], 0, label);
-    secondary_contrib += vol_shadow * phase * color.rgb * in_diffuse[__LIGHTING_COMPONENT__] * in_lightDiffuseColor[dirNum];
-    secondary_contrib += in_ambient[__LIGHTING_COMPONENT__] * in_lightAmbientColor[dirNum];
+    secondary_contrib += vol_shadow * phase * color.rgb * in_diffuse[lightingComponent] * in_lightDiffuseColor[dirNum];
+    secondary_contrib += in_ambient[lightingComponent] * in_lightAmbientColor[dirNum];
   }
       )***";
     }
@@ -1576,9 +1582,6 @@ inline std::string ComputeLightingDeclaration(vtkRenderer* vtkNotUsed(ren), vtkV
       \n  return finalColor;\
       \n  }");
 
-  std::regex lightingRegex("__LIGHTING_COMPONENT__");
-  shaderStr = std::regex_replace(shaderStr, lightingRegex, lightingComponent);
-
   return shaderStr;
 }
 
@@ -1605,6 +1608,15 @@ inline std::string ComputeLightingMultiDeclaration(vtkRenderer* vtkNotUsed(ren),
       \nvec4 computeLighting(vec3 texPos, vec4 color, const in sampler3D volume, const in sampler2D opacityTF, const int volIdx, int component)\
       \n  {\
       \n  vec4 finalColor = vec4(0.0);\n");
+  }
+
+  if (independentComponents)
+  {
+    shaderStr += "\n  int lightingComponent=component;\n";
+  }
+  else
+  {
+    shaderStr += "\n  int lightingComponent=0;\n";
   }
 
   // Shading for composite blending only
@@ -1682,14 +1694,14 @@ inline std::string ComputeLightingMultiDeclaration(vtkRenderer* vtkNotUsed(ren),
         \n     }\
         \n   if (nDotL > 0.0)\
         \n     {\
-        \n        diffuse = nDotL * in_diffuse[__LIGHTING_COMPONENT__] *\
+        \n        diffuse = nDotL * in_diffuse[lightingComponent] *\
         \n                 in_lightDiffuseColor[0] * color.rgb;\
         \n        vDotR = max(vDotR, 0.0);\
-        \n        specular = pow(vDotR, in_shininess[__LIGHTING_COMPONENT__]) *\
-        \n                   in_specular[__LIGHTING_COMPONENT__] *\
+        \n        specular = pow(vDotR, in_shininess[lightingComponent]) *\
+        \n                   in_specular[lightingComponent] *\
         \n                   in_lightSpecularColor[0];\
         \n     }\
-        \n  finalColor.xyz = in_ambient[__LIGHTING_COMPONENT__] * color.rgb * in_lightAmbientColor[0] +\
+        \n  finalColor.xyz = in_ambient[lightingComponent] * color.rgb * in_lightAmbientColor[0] +\
         \n                   diffuse + specular;\
         \n");
   }
