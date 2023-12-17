@@ -67,7 +67,7 @@ public:
    * Utility function to check the XrResult, print the result message
    * as a debug, warning or error message if the result failed.
    */
-  bool XrCheckOutput(const OutputLevel& level, const XrResult&, const std::string& message);
+  bool XrCheckOutput(OutputLevel level, const XrResult&, const std::string& message);
   ///@}
 
   ///@{
