@@ -51,6 +51,13 @@ public:
   void PrintSelf(ostream& os, vtkIndent indent) override;
 
   ///@{
+  /** 
+   * Backported functions to support Slicer 5.6
+   */
+  virtual void Dolly3D(vtkEventData*);
+  ///@}
+
+  ///@{
   /**
    * Override generic event bindings to call the corresponding action.
    */

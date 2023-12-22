@@ -105,6 +105,59 @@ void vtkVRInteractorStyle::PrintSelf(ostream& os, vtkIndent indent)
 }
 
 //------------------------------------------------------------------------------
+// Backported functions to support Slicer 5.6
+//------------------------------------------------------------------------------
+void vtkVRInteractorStyle::Dolly3D(vtkEventData* ed)
+{
+  if (this->CurrentRenderer == nullptr)
+  {
+    return;
+  }
+
+  vtkRenderWindowInteractor3D* rwi = static_cast<vtkRenderWindowInteractor3D*>(this->Interactor);
+
+  vtkEventDataDevice3D* edd = static_cast<vtkEventDataDevice3D*>(ed);
+  const double* wori = edd->GetWorldOrientation();
+
+  // move HMD world in the direction of the controller
+  vtkQuaternion<double> q1;
+  q1.SetRotationAngleAndAxis(vtkMath::RadiansFromDegrees(wori[0]), wori[1], wori[2], wori[3]);
+
+  double elem[3][3];
+  q1.ToMatrix3x3(elem);
+  double vdir[3] = { 0.0, 0.0, -1.0 };
+  vtkMatrix3x3::MultiplyPoint(elem[0], vdir, vdir);
+
+  double* trans = rwi->GetPhysicalTranslation(this->CurrentRenderer->GetActiveCamera());
+
+  // scale speed by thumb position on the touchpad along Y axis
+  // update touchpad/joystick if we have the data
+  if (edd->GetType() == vtkCommand::ViewerMovement3DEvent)
+  {
+    edd->GetTrackPadPosition(this->LastTrackPadPosition);
+  }
+  double speedScaleFactor = this->LastTrackPadPosition[1]; // -1 to +1 (the Y axis of the trackpad)
+  double physicalScale = rwi->GetPhysicalScale();
+
+  this->LastDolly3DEventTime->StopTimer();
+  double distanceTravelled_World = speedScaleFactor * this->DollyPhysicalSpeed /* m/sec */ *
+    physicalScale * /* world/physical */
+    this->LastDolly3DEventTime->GetElapsedTime() /* sec */;
+
+  this->LastDolly3DEventTime->StartTimer();
+
+  rwi->SetPhysicalTranslation(this->CurrentRenderer->GetActiveCamera(),
+    trans[0] - vdir[0] * distanceTravelled_World, trans[1] - vdir[1] * distanceTravelled_World,
+    trans[2] - vdir[2] * distanceTravelled_World);
+
+  if (this->AutoAdjustCameraClippingRange)
+  {
+    this->CurrentRenderer->ResetCameraClippingRange();
+  }
+}
+
+
+//------------------------------------------------------------------------------
 // Generic events binding
 //------------------------------------------------------------------------------
 void vtkVRInteractorStyle::OnSelect3D(vtkEventData* edata)
