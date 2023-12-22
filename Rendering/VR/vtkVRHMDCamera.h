@@ -57,6 +57,11 @@ protected:
   virtual void UpdateWorldToEyeMatrices(vtkRenderer*) = 0;
   virtual void UpdateEyeToProjectionMatrices(vtkRenderer*) = 0;
 
+  /**
+   * These methods should only be used within vtkCamera.cxx.
+   */
+  void ComputeProjectionTransform(double aspect, double nearz, double farz) override;
+
   // all the matrices below are stored in VTK convention
   // as A = Mx where x is a column vector.
 
