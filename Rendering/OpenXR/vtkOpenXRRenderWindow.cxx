@@ -177,10 +177,7 @@ void vtkOpenXRRenderWindow::Render()
     return;
   }
 
-  if (this->TrackHMD)
-  {
-    this->UpdateHMDMatrixPose();
-  }
+  this->UpdateHMDMatrixPose();
 
   if (xrManager.GetShouldRenderCurrentFrame())
   {
@@ -225,10 +222,13 @@ void vtkOpenXRRenderWindow::UpdateHMDMatrixPose()
   while ((ren = this->Renderers->GetNextRenderer(rit)))
   {
     vtkVRCamera* cam = vtkVRCamera::SafeDownCast(ren->GetActiveCamera());
-    cam->SetCameraFromDeviceToWorldMatrix(d2wMat, this->GetPhysicalScale());
-    if (ren->GetLightFollowCamera())
+    if (cam && cam->GetTrackHMD())
     {
-      ren->UpdateLightsGeometryToFollowCamera();
+      cam->SetCameraFromDeviceToWorldMatrix(d2wMat, this->GetPhysicalScale());
+      if (ren->GetLightFollowCamera())
+      {
+        ren->UpdateLightsGeometryToFollowCamera();
+      }
     }
   }
 }
