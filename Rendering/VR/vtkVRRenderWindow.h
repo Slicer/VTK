@@ -51,8 +51,9 @@ PURPOSE.  See the above copyright notice for more information.
 #ifndef vtkVRRenderWindow_h
 #define vtkVRRenderWindow_h
 
-#include "vtkEventData.h" // for enums
-#include "vtkNew.h"       // for vtkNew
+#include "vtkDeprecation.h" // for deprecation
+#include "vtkEventData.h"   // for enums
+#include "vtkNew.h"         // for vtkNew
 #include "vtkOpenGLRenderWindow.h"
 #include "vtkRenderingVRModule.h" // For export macro
 #include "vtkSmartPointer.h"      // for vtkSmartPointer
@@ -352,7 +353,9 @@ public:
    * When on the camera will track the HMD position.
    * On is the default.
    */
+  VTK_DEPRECATED_IN_9_4_0("Please use vtkVRCamera::SetTrackHMD() instead.")
   vtkSetMacro(TrackHMD, bool);
+  VTK_DEPRECATED_IN_9_4_0("Please use vtkVRCamera::GetTrackHMD() instead.")
   vtkGetMacro(TrackHMD, bool);
   ///@}
 
@@ -403,6 +406,8 @@ protected:
   virtual void RenderFramebuffer(FramebufferDesc& framebufferDesc) = 0;
 
   bool VRInitialized = false;
+
+  VTK_DEPRECATED_IN_9_4_0("Please use vtkVRCamera::TrackHMD instead.")
   bool TrackHMD = true;
 
   // One per view (typically one per eye)
