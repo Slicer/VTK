@@ -59,8 +59,8 @@ public:
    * Assign an event or std::function to an event path.
    * Called by the interactor style for specific actions
    */
-  void AddAction(const std::string& path, const vtkCommand::EventIds&);
-  void AddAction(const std::string& path, const std::function<void(vtkEventData*)>&);
+  void AddAction(const std::string& path, const vtkCommand::EventIds&) override;
+  void AddAction(const std::string& path, const std::function<void(vtkEventData*)>&) override;
   ///@}
   // add an event action
 

@@ -50,8 +50,8 @@ public:
   /**
    * Assign an event or std::function to an event path.
    */
-  void AddAction(std::string path, vtkCommand::EventIds, bool isAnalog);
-  void AddAction(std::string path, bool isAnalog, std::function<void(vtkEventData*)>);
+  void AddAction(std::string path, vtkCommand::EventIds, bool isAnalog) override;
+  void AddAction(std::string path, bool isAnalog, std::function<void(vtkEventData*)>) override;
   ///@}
 
 protected:
