@@ -197,6 +197,12 @@ public:
   virtual void RecognizeComplexGesture(vtkEventDataDevice3D* edata);
   ///@}
 
+  /**
+   * Return the identifier of the complex gesture being handled.
+   * \sa HandleComplexGestureEvents(), RecognizeComplexGesture()
+   */
+  vtkCommand::EventIds GetCurrentGesture() const;
+
 protected:
   ///@{
   /**
