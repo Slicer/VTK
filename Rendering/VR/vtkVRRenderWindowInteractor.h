@@ -147,14 +147,6 @@ public:
 
   ///@{
   /**
-   * Assign an event or std::function to an event path.
-   */
-  virtual void AddAction(std::string path, vtkCommand::EventIds, bool isAnalog) = 0;
-  virtual void AddAction(std::string path, bool isAnalog, std::function<void(vtkEventData*)>) = 0;
-  ///@}
-
-  ///@{
-  /**
    * Set/Get the .json filename describing action bindings for events.
    * Based on https://github.com/ValveSoftware/openvr/wiki/Action-manifest
    * Default is empty.
