@@ -477,6 +477,13 @@ void vtkOpenXRRenderWindowInteractor::HandleVector2fAction(
 
 //------------------------------------------------------------------------------
 void vtkOpenXRRenderWindowInteractor::AddAction(
+  const std::string& path, const vtkCommand::EventIds& eid, bool vtkNotUsed(isAnalog))
+{
+  this->AddAction(path, eid);
+}
+
+//------------------------------------------------------------------------------
+void vtkOpenXRRenderWindowInteractor::AddAction(
   const std::string& path, const vtkCommand::EventIds& eid)
 {
   if (this->MapActionStruct_Name.count(path) == 0)
@@ -488,6 +495,13 @@ void vtkOpenXRRenderWindowInteractor::AddAction(
   auto* am = this->MapActionStruct_Name[path];
   am->EventId = eid;
   am->UseFunction = false;
+}
+
+//------------------------------------------------------------------------------
+void vtkOpenXRRenderWindowInteractor::AddAction(const std::string& path, bool vtkNotUsed(isAnalog),
+  const std::function<void(vtkEventData*)>& func)
+{
+  this->AddAction(path, func);
 }
 
 //------------------------------------------------------------------------------
