@@ -41,6 +41,7 @@ set(openxr_input_files
   vtk_openxr_binding_hp_mixed_reality.json
   vtk_openxr_binding_knuckles.json
   vtk_openxr_binding_microsoft_hand_interaction.json
+  vtk_openxr_binding_oculus_touch_controller.json
 )
 
 foreach(inputfile ${openxr_input_files})

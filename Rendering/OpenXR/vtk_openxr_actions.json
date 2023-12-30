@@ -59,6 +59,10 @@
       "controller_type": "vive_controller"
     },
     {
+      "binding_url": "vtk_openxr_binding_oculus_touch_controller.json",
+      "controller_type": "oculus_touch"
+    },
+    {
       "binding_url": "vtk_openxr_binding_hp_mixed_reality.json",
       "controller_type": "mixed_reality"
     },
