@@ -19,3 +19,6 @@ project.xcworkspace
 # Exclude Visual Studio stuff
 .vs*
 CMakeSettings.json
+
+# Exclude QtCreator files ...
+CMakeLists.txt.user*
