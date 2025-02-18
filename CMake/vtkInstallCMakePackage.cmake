@@ -124,7 +124,6 @@ set(vtk_cmake_module_files
   FindOpenXRRemoting.cmake
   FindOSMesa.cmake
   FindPEGTL.cmake
-  FindTBB.cmake
   FindTHEORA.cmake
   Findutf8cpp.cmake
   FindCGNS.cmake
