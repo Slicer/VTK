@@ -1,4 +1,4 @@
 [submodule "VTK-m"]
 	path = ThirdParty/vtkm/vtkvtkm/vtk-m
-	url = https://gitlab.kitware.com/vtk/vtk-m.git
-	branch = release
+	url = https://github.com/KitwareMedical/vtk-m.git
+	branch = slicersmtk-2.0.0-2023-02-15-cfd6d3fbe
