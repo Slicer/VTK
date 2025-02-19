@@ -175,7 +175,6 @@ set(vtk_cmake_patch_files
   patches/3.23/FindPython3.cmake
   patches/4.3/FindSQLite3.cmake
   patches/99/FindHDF5.cmake
-  patches/99/FindOpenGL.cmake
   patches/99/FindX11.cmake)
 set(vtk_cmake_wasm_files
   wasm/README.md
