@@ -108,6 +108,37 @@
 #define FOR_EACH_SCENE_UNDERSTANDING_SERIALIZATION_FUNCTION(_)
 #endif
 
+#ifdef XR_FB_passthrough
+#define FOR_EACH_FB_PASSTHROUGH_FUNCTION(_)                                                        \
+  _(xrCreatePassthroughFB)                                                                         \
+  _(xrDestroyPassthroughFB)                                                                        \
+  _(xrPassthroughStartFB)                                                                          \
+  _(xrPassthroughPauseFB)                                                                          \
+  _(xrCreatePassthroughLayerFB)                                                                    \
+  _(xrDestroyPassthroughLayerFB)                                                                   \
+  _(xrPassthroughLayerResumeFB)                                                                    \
+  _(xrPassthroughLayerPauseFB)                                                                     \
+  _(xrPassthroughLayerSetStyleFB)
+#else
+#define FOR_EACH_FB_PASSTHROUGH_FUNCTION(_)
+#endif
+
+#ifdef XR_META_environment_depth
+#define FOR_EACH_META_ENVIRONMENT_DEPTH_FUNCTION(_)                                                \
+  _(xrCreateEnvironmentDepthProviderMETA)                                                          \
+  _(xrDestroyEnvironmentDepthProviderMETA)                                                         \
+  _(xrStartEnvironmentDepthProviderMETA)                                                           \
+  _(xrStopEnvironmentDepthProviderMETA)                                                            \
+  _(xrCreateEnvironmentDepthSwapchainMETA)                                                         \
+  _(xrDestroyEnvironmentDepthSwapchainMETA)                                                        \
+  _(xrEnumerateEnvironmentDepthSwapchainImagesMETA)                                                \
+  _(xrGetEnvironmentDepthSwapchainStateMETA)                                                       \
+  _(xrAcquireEnvironmentDepthImageMETA)                                                            \
+  _(xrSetEnvironmentDepthHandRemovalMETA)
+#else
+#define FOR_EACH_META_ENVIRONMENT_DEPTH_FUNCTION(_)
+#endif
+
 #define FOR_EACH_EXTENSION_FUNCTION(_)                                                             \
   FOR_EACH_VISIBILITY_MASK_FUNCTION(_)                                                             \
   FOR_EACH_HAND_TRACKING_FUNCTION(_)                                                               \
@@ -118,7 +149,9 @@
   FOR_EACH_PERCEPTION_ANCHOR_INTEROP_FUNCTION(_)                                                   \
   FOR_EACH_SCENE_UNDERSTANDING_FUNCTION(_)                                                         \
   FOR_EACH_SCENE_UNDERSTANDING_SERIALIZATION_FUNCTION(_)                                           \
-  FOR_EACH_SCENE_MARKER_FUNCTION(_)
+  FOR_EACH_SCENE_MARKER_FUNCTION(_)                                                                \
+  FOR_EACH_FB_PASSTHROUGH_FUNCTION(_)                                                              \
+  FOR_EACH_META_ENVIRONMENT_DEPTH_FUNCTION(_)
 
 #define GET_INSTANCE_PROC_ADDRESS(name)                                                            \
   (void)xrGetInstanceProcAddr(                                                                     \

@@ -213,6 +213,75 @@ public:
   bool GetShouldRenderCurrentFrame() { return this->CurrentFrame.ShouldRender; }
   ///@}
 
+  /**
+   * Return true if the XR_FB_passthrough extension is supported and was requested.
+   *
+   * This value is defined by `vtkOpenXRManager::Initialize`.
+   */
+  bool IsFBPassthroughSupported() { return this->OptionalExtensions.FBPassthroughSupported; }
+
+  /**
+   * Return true if FB passthrough is currently active (started successfully).
+   */
+  bool IsFBPassthroughActive() { return this->FBPassthroughActive; }
+
+  /**
+   * Start Meta XR_FB_passthrough.  Creates the passthrough object and layer,
+   * sets FBPassthroughActive on success.  Must be called after Initialize().
+   * A passthrough composition layer will be prepended in every EndFrame() call
+   * while active, so that the camera feed appears as the background.
+   */
+  bool StartFBPassthrough();
+
+  /**
+   * Stop Meta XR_FB_passthrough and release its resources.
+   * Safe to call even if passthrough was never started.
+   */
+  void StopFBPassthrough();
+
+  /**
+   * Return true if the XR_META_environment_depth extension is supported and was requested.
+   */
+  bool IsEnvironmentDepthSupported() { return this->OptionalExtensions.EnvironmentDepthSupported; }
+
+  /**
+   * Return true if environment depth is currently active (provider started successfully).
+   */
+  bool IsEnvironmentDepthActive() { return this->EnvDepthActive; }
+
+  /**
+   * Start the META environment depth provider and swapchain.
+   * Call from BeginSession() once the session is running.
+   */
+  bool StartEnvironmentDepth();
+
+  /**
+   * Stop the META environment depth provider and release its resources.
+   * Safe to call even if environment depth was never started.
+   */
+  void StopEnvironmentDepth();
+
+  /**
+   * Acquire the current frame's environment depth image.
+   * Must be called each frame from WaitAndBeginFrame() while active.
+   * Stores the result (GL texture ID + per-eye views) for use by the pre-pass.
+   */
+  bool AcquireEnvironmentDepthImage();
+
+  /**
+   * Return the GL texture ID of the current frame's environment depth image,
+   * and the per-eye view info (pose + FOV).
+   * Both are valid only after a successful AcquireEnvironmentDepthImage() call.
+   * These accessors are only available when XR_META_environment_depth is defined
+   * by the OpenXR SDK headers (SDK >= 1.1.36).
+   */
+#ifdef XR_META_environment_depth
+  uint32_t GetEnvDepthTextureId() const { return this->EnvDepthTextureId; }
+  const XrEnvironmentDepthImageViewMETA* GetEnvDepthViews() const { return this->EnvDepthViews; }
+  vtkGetMacro(EnvDepthNearZ, float);
+  vtkGetMacro(EnvDepthFarZ, float);
+#endif
+
   ///@{
   /**
    * Start the OpenXR session.
@@ -467,6 +536,35 @@ public:
    */
   XrSpace GetReferenceSpace() const { return this->ReferenceSpace; }
 
+  ///@{
+  /**
+   * Set/Get the preferred environment blend mode.
+   *
+   * When set before initialization, `CreateSystemProperties` will select this
+   * blend mode if the runtime supports it.  If the runtime does not support the
+   * requested mode the first (runtime-preferred) mode is used instead.
+   *
+   * Set to XR_ENVIRONMENT_BLEND_MODE_MAX_ENUM (the default) to use the
+   * runtime's own preference (i.e. the first mode in the enumerated list).
+   *
+   * The value is meaningful only after `Initialize()` has been called.
+   * Call `GetEnvironmentBlendMode()` to retrieve the mode that was actually
+   * selected by the runtime.
+   */
+  void SetPreferredEnvironmentBlendMode(XrEnvironmentBlendMode mode)
+  {
+    this->PreferredEnvironmentBlendMode = mode;
+  }
+  XrEnvironmentBlendMode GetPreferredEnvironmentBlendMode() const
+  {
+    return this->PreferredEnvironmentBlendMode;
+  }
+  XrEnvironmentBlendMode GetEnvironmentBlendMode() const
+  {
+    return this->EnvironmentBlendMode;
+  }
+  ///@}
+
 protected:
   vtkOpenXRManager();
   ~vtkOpenXRManager() = default;
@@ -612,6 +710,10 @@ protected:
   // choose XR_ENVIRONMENT_BLEND_MODE_ADDITIVE or XR_ENVIRONMENT_BLEND_MODE_ALPHA_BLEND
   XrEnvironmentBlendMode EnvironmentBlendMode;
 
+  // Caller-requested preferred blend mode. XR_ENVIRONMENT_BLEND_MODE_MAX_ENUM means
+  // "use the runtime's preference" (i.e. pick environmentBlendModes[0]).
+  XrEnvironmentBlendMode PreferredEnvironmentBlendMode{ XR_ENVIRONMENT_BLEND_MODE_MAX_ENUM };
+
   // Non optional extension
   bool RenderingBackendExtensionSupported = false;
 
@@ -631,6 +733,8 @@ protected:
     bool RemotingSupported{ false };
     bool SceneUnderstandingSupported{ false };
     bool SceneMarkerSupported{ false };
+    bool FBPassthroughSupported{ false };
+    bool EnvironmentDepthSupported{ false };
   } OptionalExtensions;
   ///@}
 
@@ -701,6 +805,25 @@ protected:
   vtkSmartPointer<vtkOpenXRManagerGraphics> GraphicsStrategy;
 
   vtkSmartPointer<vtkOpenXRManagerConnection> ConnectionStrategy;
+
+  // XR_FB_passthrough handles (valid only when FBPassthroughActive is true)
+#ifdef XR_FB_passthrough
+  XrPassthroughFB FBPassthrough{ XR_NULL_HANDLE };
+  XrPassthroughLayerFB FBPassthroughLayer{ XR_NULL_HANDLE };
+#endif
+  bool FBPassthroughActive{ false };
+
+  // XR_META_environment_depth handles and per-frame state
+#ifdef XR_META_environment_depth
+  XrEnvironmentDepthProviderMETA EnvDepthProvider{ XR_NULL_HANDLE };
+  XrEnvironmentDepthSwapchainMETA EnvDepthSwapchain{ XR_NULL_HANDLE };
+  std::vector<uint32_t> EnvDepthTextureIds; // GL texture IDs, one per swapchain image
+  XrEnvironmentDepthImageViewMETA EnvDepthViews[2];
+  uint32_t EnvDepthTextureId{ 0 };
+  float EnvDepthNearZ{ 0.0 };
+  float EnvDepthFarZ{ 0.0 };
+#endif
+  bool EnvDepthActive{ false };
 
 private:
   vtkOpenXRManager(const vtkOpenXRManager&) = delete;
