@@ -277,14 +277,19 @@ void vtkOpenXRRenderWindow::Finalize()
     return;
   }
 
+  // Release VTK-owned OpenGL resources while the GL context is still valid.
+  // This must happen before HelperWindow->Finalize() destroys the context.
+  this->MakeCurrent();
+  this->ReleaseGraphicsResources(this);
+
+  // Destroy the GL context before XR teardown to release OpenGL resources
+  // while the context is still valid.
   if (this->HelperWindow && this->HelperWindow->GetGenericContext())
   {
     this->HelperWindow->Finalize();
   }
 
   vtk::detail::vtkOpenXRManager::GetInstance().Finalize();
-
-  this->ReleaseGraphicsResources(this);
 
   this->VRInitialized = false;
 }
@@ -293,11 +298,6 @@ void vtkOpenXRRenderWindow::Finalize()
 void vtkOpenXRRenderWindow::Render()
 {
   auto& xrManager = vtk::detail::vtkOpenXRManager::GetInstance();
-
-  if (!xrManager.WaitAndBeginFrame())
-  {
-    return;
-  }
 
   if (this->Internal->SceneObserver)
   {
@@ -311,8 +311,6 @@ void vtkOpenXRRenderWindow::Render()
     // Start rendering
     this->Superclass::Render();
   }
-
-  xrManager.EndFrame();
 }
 
 //------------------------------------------------------------------------------
@@ -333,6 +331,7 @@ void vtkOpenXRRenderWindow::UpdateHMDMatrixPose()
     vtkErrorMacro(<< "No pose for left eye");
     return;
   }
+
   // Convert a XrPosef to a vtk view matrix
   vtkMatrix4x4* hmdToPhysicalMatrix = this->GetDeviceToPhysicalMatrixForDeviceHandle(handle);
   vtkOpenXRUtilities::SetMatrixFromXrPose(hmdToPhysicalMatrix, *xrPose);

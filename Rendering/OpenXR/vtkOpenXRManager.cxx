@@ -210,23 +210,28 @@ bool vtkOpenXRManager::BeginSession()
 //------------------------------------------------------------------------------
 bool vtkOpenXRManager::WaitAndBeginFrame()
 {
-  // Proactively reset the flag to avoid any attempted rendering in case
-  // the function exits prematurely.
-  this->ShouldRenderCurrentFrame = false;
+  // If a frame has already been started, skip xrWaitFrame/xrBeginFrame
+  // they must only happen once per frame.
+  if (this->FrameBegan)
+  {
+    return true;
+  }
 
   VTK_CHECK_NULL_XRHANDLE(this->Session, "vtkOpenXRManager::WaitAndBeginFrame, Session");
 
-  // Wait frame
-  XrFrameWaitInfo frameWaitInfo{ XR_TYPE_FRAME_WAIT_INFO };
-  XrFrameState frameState{ XR_TYPE_FRAME_STATE };
+  // Reset per-frame validity flags; FrameState/Views/ViewState are written
+  // below or by LocateViews().
+  this->CurrentFrame.ShouldRender = false;
+  this->CurrentFrame.PoseValid = false;
 
+  XrFrameWaitInfo frameWaitInfo{ XR_TYPE_FRAME_WAIT_INFO };
   if (!this->XrCheckOutput(vtkOpenXRManager::ErrorOutput,
-        xrWaitFrame(this->Session, &frameWaitInfo, &frameState), "Failed to wait frame."))
+        xrWaitFrame(this->Session, &frameWaitInfo, &this->CurrentFrame.FrameState),
+        "Failed to wait frame."))
   {
     return false;
   }
 
-  // Begin frame
   XrFrameBeginInfo frameBeginInfo{ XR_TYPE_FRAME_BEGIN_INFO };
   if (!this->XrCheckOutput(vtkOpenXRManager::ErrorOutput,
         xrBeginFrame(this->Session, &frameBeginInfo), "Failed to begin frame."))
@@ -234,40 +239,69 @@ bool vtkOpenXRManager::WaitAndBeginFrame()
     return false;
   }
 
-  // Store the value of shouldRender to avoid a render
-  this->ShouldRenderCurrentFrame = frameState.shouldRender;
+  this->CurrentFrame.ShouldRender = this->CurrentFrame.FrameState.shouldRender;
 
-  // Store the value of frame predicted display time that is used in EndFrame
-  this->PredictedDisplayTime = frameState.predictedDisplayTime;
+  this->FrameBegan = true;
+  return true;
+}
 
-  if (this->ShouldRenderCurrentFrame)
+//------------------------------------------------------------------------------
+bool vtkOpenXRManager::LocateViews()
+{
+  if (!this->CurrentFrame.ShouldRender)
   {
-    // Locate the views : this will update view pose and projection fov for each view
-    XrViewLocateInfo viewLocateInfo{ XR_TYPE_VIEW_LOCATE_INFO };
-    viewLocateInfo.viewConfigurationType = this->ViewType;
-    viewLocateInfo.displayTime = frameState.predictedDisplayTime;
-    viewLocateInfo.space = this->ReferenceSpace;
-    const uint32_t viewCount = this->GetViewCount();
-    uint32_t viewCountOutput;
-    if (!this->XrCheckOutput(vtkOpenXRManager::ErrorOutput,
-          xrLocateViews(this->Session, &viewLocateInfo, &this->RenderResources->ViewState,
-            viewCount, &viewCountOutput, this->RenderResources->Views.data()),
-          "Failed to locate views !"))
-    {
-      return false;
-    }
+    // No need to locate views if the runtime has already indicated that we
+    // shouldn't render this frame.
+    return true;
+  }
 
-    if (viewCountOutput != viewCount)
-    {
-      vtkWarningWithObjectMacro(nullptr, << "ViewCountOutput (" << viewCountOutput
-                                         << ") is different than ViewCount (" << viewCount
-                                         << ") !");
-    }
+  XrViewLocateInfo viewLocateInfo{ XR_TYPE_VIEW_LOCATE_INFO };
+  viewLocateInfo.viewConfigurationType = this->ViewType;
+  viewLocateInfo.displayTime = this->CurrentFrame.FrameState.predictedDisplayTime;
+  viewLocateInfo.space = this->ReferenceSpace;
+  uint32_t viewCountOutput = 0;
+
+  if (!this->XrCheckOutput(ErrorOutput,
+        xrLocateViews(this->Session, &viewLocateInfo, &this->CurrentFrame.ViewState,
+          (uint32_t)this->CurrentFrame.Views.size(), &viewCountOutput,
+          this->CurrentFrame.Views.data()),
+        "xrLocateViews failed"))
+  {
+    return false;
+  }
+
+  // Validate viewStateFlags. If invalid, fall back to the last known-good
+  // pose so we still submit a coherent projection layer (avoids compositor
+  // crashes / black frames). If we have never seen a valid pose, suppress
+  // rendering for this frame entirely.
+  const XrViewStateFlags requiredFlags =
+    XR_VIEW_STATE_POSITION_VALID_BIT | XR_VIEW_STATE_ORIENTATION_VALID_BIT;
+  const bool nowValid =
+    (this->CurrentFrame.ViewState.viewStateFlags & requiredFlags) == requiredFlags;
+
+  if (nowValid)
+  {
+    this->LastValidViewState = this->CurrentFrame.ViewState;
+    this->LastValidViews = this->CurrentFrame.Views;
+    this->CurrentFrame.PoseValid = true;
+  }
+  else if ((this->LastValidViewState.viewStateFlags & requiredFlags) == requiredFlags)
+  {
+    this->CurrentFrame.ViewState = this->LastValidViewState;
+    this->CurrentFrame.Views = this->LastValidViews;
+    this->CurrentFrame.PoseValid = true;
+  }
+  else
+  {
+    // No valid pose ever - skip submitting any projection layer this frame.
+    this->CurrentFrame.PoseValid = false;
+    this->CurrentFrame.ShouldRender = false;
   }
 
   return true;
 }
 
+//------------------------------------------------------------------------------
 // loads the controller models using an extension if it is present.
 // todo needs to be tied into the models class and
 // the gltf conversion completed right now it is here as an example
@@ -311,6 +345,7 @@ bool vtkOpenXRManager::LoadControllerModels()
     extensions.xrLoadControllerModelMSFT(this->Session, controllerModelKeyState.modelKey,
       bufferCapacityInput, &bufferCountOutput, buffer),
     "Failed to get controller model!");
+  delete[] buffer;
 
   return true;
 }
@@ -356,8 +391,8 @@ bool vtkOpenXRManager::PrepareRendering(
   this->GraphicsStrategy->GetColorSwapchainImage(eye, colorSwapchainImageIndex, colorTextureId);
 
   this->RenderResources->ProjectionLayerViews[eye] = { XR_TYPE_COMPOSITION_LAYER_PROJECTION_VIEW };
-  this->RenderResources->ProjectionLayerViews[eye].pose = this->RenderResources->Views[eye].pose;
-  this->RenderResources->ProjectionLayerViews[eye].fov = this->RenderResources->Views[eye].fov;
+  this->RenderResources->ProjectionLayerViews[eye].pose = this->CurrentFrame.Views[eye].pose;
+  this->RenderResources->ProjectionLayerViews[eye].fov = this->CurrentFrame.Views[eye].fov;
   this->RenderResources->ProjectionLayerViews[eye].subImage.swapchain = colorSwapchain.Swapchain;
   this->RenderResources->ProjectionLayerViews[eye].subImage.imageRect = imageRect;
   this->RenderResources->ProjectionLayerViews[eye].subImage.imageArrayIndex = 0;
@@ -413,40 +448,52 @@ void vtkOpenXRManager::ReleaseSwapchainImage(uint32_t eye)
 //------------------------------------------------------------------------------
 bool vtkOpenXRManager::EndFrame()
 {
-  // The projection layer consists of projection layer views.
+  // Snapshot the render flag from CurrentFrame.
+  const bool shouldRender = this->CurrentFrame.ShouldRender;
+
   XrCompositionLayerProjection layer{ XR_TYPE_COMPOSITION_LAYER_PROJECTION };
+
   std::vector<XrCompositionLayerBaseHeader*> layers;
 
-  // If the frame has been rendered, then we must submit the ProjectionLayerViews:
-  if (this->ShouldRenderCurrentFrame)
+  // Projection layer
+  if (shouldRender)
   {
-    // Inform the runtime that the app's submitted alpha channel has valid data for use during
-    // composition. The primary display on HoloLens has an additive environment blend mode. It will
-    // ignore the alpha channel. However, mixed reality capture uses the alpha channel if this bit
-    // is set to blend content with the environment.
+    const uint32_t viewCount =
+      static_cast<uint32_t>(this->RenderResources->ProjectionLayerViews.size());
+
+    // Guard against mismatch (prevents xrEndFrame rejection / undefined compositor behavior)
+    if (viewCount == 0 || viewCount != this->GetViewCount())
+    {
+      //vtkErrorMacro("EndFrame: invalid view count submission");
+      this->FrameBegan = false;
+      return false;
+    }
+
     layer.layerFlags = this->OptionalExtensions.RemotingSupported
       ? XR_COMPOSITION_LAYER_BLEND_TEXTURE_SOURCE_ALPHA_BIT
       : 0;
+
     layer.space = this->ReferenceSpace;
-    layer.viewCount = (uint32_t)this->RenderResources->ProjectionLayerViews.size();
+    layer.viewCount = viewCount;
     layer.views = this->RenderResources->ProjectionLayerViews.data();
 
-    // Add the layer to the submitted layers
     layers.push_back(reinterpret_cast<XrCompositionLayerBaseHeader*>(&layer));
   }
-  // Reset should render state
-  this->ShouldRenderCurrentFrame = false;
 
-  // Submit the composition layers for the predicted display time.
-  // If the frame shouldn't be rendered, submit an empty vector
   XrFrameEndInfo frameEndInfo{ XR_TYPE_FRAME_END_INFO };
-  frameEndInfo.displayTime = this->PredictedDisplayTime;
+  frameEndInfo.displayTime = this->CurrentFrame.FrameState.predictedDisplayTime;
   frameEndInfo.environmentBlendMode = this->EnvironmentBlendMode;
-  frameEndInfo.layerCount = (uint32_t)layers.size();
-  frameEndInfo.layers = layers.data();
-  xrEndFrame(this->Session, &frameEndInfo);
+  frameEndInfo.layerCount = static_cast<uint32_t>(layers.size());
+  frameEndInfo.layers = layers.empty() ? nullptr : layers.data();
 
-  return true;
+  // End frame (must always be called if BeginFrame succeeded)
+  const bool ok = this->XrCheckOutput(
+    vtkOpenXRManager::ErrorOutput, xrEndFrame(this->Session, &frameEndInfo), "xrEndFrame failed");
+
+  // Always reset frame state even on failure (prevents deadlock of frame loop)
+  this->FrameBegan = false;
+
+  return ok;
 }
 
 //------------------------------------------------------------------------------
@@ -912,7 +959,7 @@ bool vtkOpenXRManager::CreateSystemProperties()
         &count, environmentBlendModes.data()),
       "Failed to enumerate environment blend modes");
 
-    // Pick the system's preferred one
+    // Pick the system's preferred blend mode.
     this->EnvironmentBlendMode = environmentBlendModes[0];
   }
 
@@ -1090,7 +1137,7 @@ bool vtkOpenXRManager::CreateSwapchains()
   }
 
   // Preallocate view buffers for xrLocateViews later inside frame loop.
-  this->RenderResources->Views.resize(viewCount, { XR_TYPE_VIEW });
+  this->CurrentFrame.Views.resize(viewCount, { XR_TYPE_VIEW });
 
   // Preallocate projection layer views and depth if needed
   this->RenderResources->ProjectionLayerViews.resize(viewCount);
@@ -1272,25 +1319,39 @@ bool vtkOpenXRManager::CreateOneAction(
     return false;
   }
 
-  // If this is a pose action, we need to create an action space
-  // In order to use LocateSpace
-  if (actionT.ActionType == XR_ACTION_TYPE_POSE_INPUT)
+  // Pose action spaces are intentionally NOT created here.  The Meta Quest
+  // runtime requires xrAttachSessionActionSets to have been called before
+  // xrCreateActionSpace; otherwise xrLocateSpace returns locationFlags=0
+  // forever even though the underlying action becomes active and the
+  // interaction profile binds correctly.  The interactor is responsible for
+  // calling CreateActionPoseSpaces() on every pose action AFTER
+  // AttachSessionActionSets().
+
+  return true;
+}
+
+//------------------------------------------------------------------------------
+bool vtkOpenXRManager::CreateActionPoseSpaces(Action_t& actionT)
+{
+  if (actionT.ActionType != XR_ACTION_TYPE_POSE_INPUT)
   {
-    // One action space per pointer pose and store it in subaction space
-    for (uint32_t hand :
-      { vtkOpenXRManager::ControllerIndex::Left, vtkOpenXRManager::ControllerIndex::Right })
+    return true;
+  }
+  VTK_CHECK_NULL_XRHANDLE(this->Session, "vtkOpenXRManager::CreateActionPoseSpaces, Session");
+  VTK_CHECK_NULL_XRHANDLE(actionT.Action, "vtkOpenXRManager::CreateActionPoseSpaces, Action");
+
+  for (uint32_t hand :
+    { vtkOpenXRManager::ControllerIndex::Left, vtkOpenXRManager::ControllerIndex::Right })
+  {
+    if (!this->CreateOneActionSpace(actionT.Action, this->SubactionPaths[hand],
+          vtkOpenXRUtilities::GetIdentityPose(), actionT.PoseSpaces[hand]))
     {
-      if (!this->CreateOneActionSpace(actionT.Action, this->SubactionPaths[hand],
-            vtkOpenXRUtilities::GetIdentityPose(), actionT.PoseSpaces[hand]))
-      {
-        vtkErrorWithObjectMacro(nullptr,
-          << "Failed to create pose action space for "
-          << (hand == vtkOpenXRManager::ControllerIndex::Left ? "left" : "right") << " hand");
-        return false;
-      };
+      vtkErrorWithObjectMacro(nullptr,
+        << "Failed to create pose action space for "
+        << (hand == vtkOpenXRManager::ControllerIndex::Left ? "left" : "right") << " hand");
+      return false;
     }
   }
-
   return true;
 }
 
@@ -1417,7 +1478,13 @@ bool vtkOpenXRManager::UpdateActionData(Action_t& action_t, const int hand)
         return false;
       }
 
-      if (action_t.States[hand]._pose.isActive)
+      // Always locate the space to get fresh locationFlags, regardless of isActive.
+      // When isActive is false the pose may be unreliable, but the locationFlags
+      // returned by xrLocateSpace will reflect that (bits will not be set), so
+      // callers that check locationFlags before using the pose are safe.
+      // Gating xrLocateSpace on isActive left locationFlags stale (or zero at
+      // startup), causing valid-pose checks downstream to fail even when the
+      // runtime could still supply a usable pose.
       {
         action_t.PoseLocations[hand].type = XR_TYPE_SPACE_LOCATION;
         action_t.PoseLocations[hand].next = nullptr;
@@ -1432,7 +1499,7 @@ bool vtkOpenXRManager::UpdateActionData(Action_t& action_t, const int hand)
         // Store the position of the hand
         if (!this->XrCheckOutput(vtkOpenXRManager::ErrorOutput,
               xrLocateSpace(action_t.PoseSpaces[hand], this->ReferenceSpace,
-                this->PredictedDisplayTime, &action_t.PoseLocations[hand]),
+                this->CurrentFrame.FrameState.predictedDisplayTime, &action_t.PoseLocations[hand]),
               "Failed to locate hand space"))
         {
           return false;
