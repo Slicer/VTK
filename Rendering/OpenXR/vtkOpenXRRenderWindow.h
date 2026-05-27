@@ -34,11 +34,18 @@
 #include "vtkVRRenderWindow.h"
 
 #include "vtkEventData.h" // for method sig
+#include "vtkOpenXR.h"   // for XR_META_environment_depth and OpenXR types
 
 #include <array>   // array
 #include <cstdint> // uint32_t
 #include <memory>  // unique_ptr
 #include <string>  // string
+
+// Forward declaration for environment depth occlusion pre-pass (used when
+// XR_META_environment_depth is available).
+#ifdef XR_META_environment_depth
+class vtkOpenXREnvironmentDepthOcclusionPrePass;
+#endif
 
 VTK_ABI_NAMESPACE_BEGIN
 
@@ -196,6 +203,98 @@ public:
   vtkGetMacro(EnableSceneUnderstanding, bool);
   ///@}
 
+  ///@{
+  /**
+   * Enable or disable camera passthrough (mixed reality / AR mode).
+   *
+   * When enabled, the OpenXR manager is requested to use
+   * `XR_ENVIRONMENT_BLEND_MODE_ALPHA_BLEND` so that real-world content seen
+   * through the headset's cameras shows through wherever the rendered image
+   * has a transparent (alpha = 0) background.
+   *
+   * This must be set before initializing the render window.
+   * If the runtime does not support `XR_ENVIRONMENT_BLEND_MODE_ALPHA_BLEND`
+   * the request is silently ignored and VR (opaque) rendering is used.
+   *
+   * The renderer background is automatically set to fully transparent when
+   * passthrough is enabled so passthrough is visible.
+   *
+   * Default value: `false`
+   */
+  vtkSetMacro(UsePassthrough, bool);
+  vtkGetMacro(UsePassthrough, bool);
+  vtkBooleanMacro(UsePassthrough, bool);
+  ///@}
+
+  ///@{
+  /**
+   * Set the opacity of virtual geometry that is occluded by real-world surfaces
+   * when environment-depth occlusion (`XR_META_environment_depth`) is active.
+   *
+   * - 0.0 (default): fully occluded — virtual objects behind real surfaces are
+   *   invisible (hard occlusion using a depth pre-pass).
+   * - 0.0 < value < 1.0: partial occlusion — occluded pixels have their alpha
+   *   multiplied by this value (post-pass, scene renders normally).
+   * - 1.0: no occlusion — depth composition is skipped entirely.
+   *
+   * This must be set before or during rendering; changes take effect on the
+   * next rendered frame.
+   *
+   * Has no effect if `XR_META_environment_depth` is unavailable or inactive.
+   */
+  vtkSetClampMacro(OccludedOpacity, float, 0.0f, 1.0f);
+  vtkGetMacro(OccludedOpacity, float);
+  ///@}
+
+  ///@{
+  /**
+   * Enable or disable the false-colour environment-depth debug visualisation overlay.
+   *
+   * When enabled, a semi-transparent red-to-blue colour map of the real-world
+   * depth texture is composited on top of each eye's rendered frame.
+   * Red = near (0 m), blue = far (~5 m).  Intended for verifying that the
+   * depth texture is being received and reprojected correctly.
+   *
+   * Has no effect if `XR_META_environment_depth` is unavailable or inactive.
+   *
+   * Default value: `false`
+   */
+  vtkSetMacro(ShowEnvDepthDebugVisualization, bool);
+  vtkGetMacro(ShowEnvDepthDebugVisualization, bool);
+  vtkBooleanMacro(ShowEnvDepthDebugVisualization, bool);
+  ///@}
+
+  ///@{
+  /**
+   * When true, the XR_META_environment_depth extension is requested at session
+   * creation time even if OccludedOpacity == 1.0 (i.e. depth-occlusion rendering
+   * is not active).  Use this when you need raw environment-depth data for
+   * purposes other than occlusion (e.g. capturing depth into a volume node).
+   *
+   * Must be set before the OpenXR session is initialized.
+   * Has no effect if the runtime does not support XR_META_environment_depth.
+   *
+   * Default value: `false`
+   */
+  vtkSetMacro(CaptureEnvironmentDepth, bool);
+  vtkGetMacro(CaptureEnvironmentDepth, bool);
+  vtkBooleanMacro(CaptureEnvironmentDepth, bool);
+  ///@}
+
+  /**
+   * Returns true if passthrough (XR_ENVIRONMENT_BLEND_MODE_ALPHA_BLEND) is
+   * actually active after initialization.
+   *
+   * If UsePassthrough was requested but the runtime does not support
+   * XR_ENVIRONMENT_BLEND_MODE_ALPHA_BLEND, `Initialize()` falls back to the
+   * runtime-preferred mode (typically XR_ENVIRONMENT_BLEND_MODE_OPAQUE) and
+   * this method returns false.
+   *
+   * Only meaningful after Initialize() has been called and returned
+   * VRInitialized == true.
+   */
+  bool IsPassthroughActive() const;
+
   /**
    * Returns scene observer associated with this window.
    *
@@ -252,6 +351,17 @@ private:
 
   bool UseDepthExtension = false;
   bool EnableSceneUnderstanding = false;
+  bool UsePassthrough = false;
+  float OccludedOpacity = 1.0f;
+  bool ShowEnvDepthDebugVisualization = false;
+  bool CaptureEnvironmentDepth = false;
+
+#ifdef XR_META_environment_depth
+  // Depth occlusion pre-pass: writes real-world depths to the depth buffer
+  // before each eye's scene render so virtual geometry behind real surfaces
+  // is naturally occluded. Created on first use, destroyed on ~vtkOpenXRRenderWindow.
+  std::unique_ptr<vtkOpenXREnvironmentDepthOcclusionPrePass> EnvDepthPrePass;
+#endif
 };
 
 VTK_ABI_NAMESPACE_END

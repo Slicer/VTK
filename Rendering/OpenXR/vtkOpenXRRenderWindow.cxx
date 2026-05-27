@@ -24,6 +24,10 @@
 
 #include <map> // map
 
+#ifdef XR_META_environment_depth
+#include "vtkOpenXREnvironmentDepthOcclusionPrePass.h"
+#endif
+
 // include what we need for the helper window
 #if defined(_WIN32)
 #include "vtkWin32OpenGLRenderWindow.h"
@@ -236,11 +240,30 @@ void vtkOpenXRRenderWindow::Initialize()
   this->OpenGLInit();
 
   auto& xrManager = vtk::detail::vtkOpenXRManager::GetInstance();
+  // Always reset the preferred blend mode first so that a previous session's
+  // setting does not carry over into a fresh session.
+  xrManager.SetPreferredEnvironmentBlendMode(XR_ENVIRONMENT_BLEND_MODE_MAX_ENUM);
+  if (this->UsePassthrough)
+  {
+    xrManager.SetPreferredEnvironmentBlendMode(XR_ENVIRONMENT_BLEND_MODE_ALPHA_BLEND);
+  }
   if (!xrManager.Initialize(this))
   {
     // Set to false because the above init of the HelperWindow sets it to true
     vtkErrorMacro(<< "Failed to initialize OpenXRManager");
     return;
+  }
+
+  // Initialize XR_FB_passthrough objects if passthrough was requested and the
+  // extension is available.  xrPassthroughStartFB will be called from
+  // BeginSession() once the session transitions to the READY state.
+  if (this->UsePassthrough && xrManager.IsFBPassthroughSupported())
+  {
+    if (!xrManager.StartFBPassthrough())
+    {
+      vtkWarningMacro("Failed to initialize XR_FB_passthrough objects. "
+                      "Passthrough will not be available.");
+    }
   }
 
   if (this->EnableSceneUnderstanding && xrManager.IsSceneUnderstandingSupported())
@@ -270,6 +293,16 @@ void vtkOpenXRRenderWindow::Initialize()
 }
 
 //------------------------------------------------------------------------------
+bool vtkOpenXRRenderWindow::IsPassthroughActive() const
+{
+  auto& xrManager = vtk::detail::vtkOpenXRManager::GetInstance();
+  // Passthrough is active either via the standard ALPHA_BLEND environment blend
+  // mode, or via the Meta-specific XR_FB_passthrough composition layer.
+  return xrManager.GetEnvironmentBlendMode() == XR_ENVIRONMENT_BLEND_MODE_ALPHA_BLEND ||
+    xrManager.IsFBPassthroughActive();
+}
+
+//------------------------------------------------------------------------------
 void vtkOpenXRRenderWindow::Finalize()
 {
   if (!this->VRInitialized)
@@ -281,9 +314,16 @@ void vtkOpenXRRenderWindow::Finalize()
   // This must happen before HelperWindow->Finalize() destroys the context.
   this->MakeCurrent();
   this->ReleaseGraphicsResources(this);
+#ifdef XR_META_environment_depth
+  // Destroy the occlusion pre-pass GL programs/VAOs while the context is current.
+  this->EnvDepthPrePass.reset();
+#endif
 
-  // Destroy the GL context before XR teardown to release OpenGL resources
-  // while the context is still valid.
+  // Destroy the GL context before XR teardown. The Meta OpenXR runtime's
+  // XR_FB_passthrough layer deadlocks during xrDestroyInstance when a GL
+  // context is still current. Destroying the context first causes the
+  // runtime to skip its internal GL cleanup (the driver reclaims those
+  // resources anyway) and avoids the hang.
   if (this->HelperWindow && this->HelperWindow->GetGenericContext())
   {
     this->HelperWindow->Finalize();
@@ -361,12 +401,56 @@ void vtkOpenXRRenderWindow::UpdateHMDMatrixPose()
 void vtkOpenXRRenderWindow::StereoUpdate()
 {
   this->Superclass::StereoUpdate();
+
+#ifdef XR_META_environment_depth
+  auto& xrManager = vtk::detail::vtkOpenXRManager::GetInstance();
+  if (xrManager.IsEnvironmentDepthActive())
+  {
+    // Ensure the post-pass object exists — it handles occlusion post-pass and
+    // debug visualisation. The post-pass runs AFTER each eye's scene render in
+    // StereoMidpoint / StereoRenderComplete, so scene depths are already present
+    // in the depth buffer.  This avoids the timing issue where a pre-pass written
+    // here would be erased by VTK's renderer Clear() before geometry renders.
+    if (!this->EnvDepthPrePass)
+    {
+      this->EnvDepthPrePass = std::make_unique<vtkOpenXREnvironmentDepthOcclusionPrePass>();
+    }
+    // OccludedOpacity < 1.0: ApplyOcclusionPostPass runs after each eye render.
+    // OccludedOpacity == 1.0: depth composition bypassed entirely.
+  }
+#endif
 }
 
 //------------------------------------------------------------------------------
 void vtkOpenXRRenderWindow::StereoMidpoint()
 {
   this->GetState()->vtkglDisable(GL_MULTISAMPLE);
+
+#ifdef XR_META_environment_depth
+  {
+    auto& xrManager = vtk::detail::vtkOpenXRManager::GetInstance();
+    if (xrManager.IsEnvironmentDepthActive() && this->EnvDepthPrePass)
+    {
+      vtkCamera* cam = this->GetRenderers()->GetFirstRenderer()->GetActiveCamera();
+      // Debug visualisation overlay (shown only when explicitly enabled).
+      if (this->ShowEnvDepthDebugVisualization)
+      {
+        this->EnvDepthPrePass->DebugVisualize(
+          LEFT_EYE, cam, xrManager.GetEnvDepthTextureId(), xrManager.GetEnvDepthViews());
+      }
+      // Post-pass: alpha-based occlusion uses the scene's depth buffer,
+      // so it runs AFTER the scene render and BEFORE blitting the eye.
+      // OccludedOpacity=0.0 fully hides occluded pixels (alpha → 0);
+      // OccludedOpacity in (0,1) partially hides them.
+      if (this->OccludedOpacity < 1.0f)
+      {
+        this->EnvDepthPrePass->ApplyOcclusionPostPass(LEFT_EYE, cam,
+          xrManager.GetEnvDepthTextureId(), xrManager.GetEnvDepthViews(), this->OccludedOpacity,
+          static_cast<float>(this->GetPhysicalScale()));
+      }
+    }
+  }
+#endif
 
   if (this->SwapBuffers)
   {
@@ -378,6 +462,29 @@ void vtkOpenXRRenderWindow::StereoMidpoint()
 void vtkOpenXRRenderWindow::StereoRenderComplete()
 {
   this->GetState()->vtkglDisable(GL_MULTISAMPLE);
+
+#ifdef XR_META_environment_depth
+  {
+    auto& xrManager = vtk::detail::vtkOpenXRManager::GetInstance();
+    if (xrManager.IsEnvironmentDepthActive() && this->EnvDepthPrePass)
+    {
+      vtkCamera* cam = this->GetRenderers()->GetFirstRenderer()->GetActiveCamera();
+      // Debug visualisation overlay.
+      if (this->ShowEnvDepthDebugVisualization)
+      {
+        this->EnvDepthPrePass->DebugVisualize(
+          RIGHT_EYE, cam, xrManager.GetEnvDepthTextureId(), xrManager.GetEnvDepthViews());
+      }
+      // Post-pass for the right eye.
+      if (this->OccludedOpacity < 1.0f)
+      {
+        this->EnvDepthPrePass->ApplyOcclusionPostPass(RIGHT_EYE, cam,
+          xrManager.GetEnvDepthTextureId(), xrManager.GetEnvDepthViews(), this->OccludedOpacity,
+          static_cast<float>(this->GetPhysicalScale()));
+      }
+    }
+  }
+#endif
 
   if (this->SwapBuffers)
   {

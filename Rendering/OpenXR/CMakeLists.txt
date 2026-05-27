@@ -1,4 +1,4 @@
-vtk_module_find_package(PRIVATE_IF_SHARED PACKAGE OpenXR VERSION 1.0.31)
+vtk_module_find_package(PRIVATE_IF_SHARED PACKAGE OpenXR VERSION 1.1.36)
 
 set(classes
   vtkOpenXRRenderWindow
@@ -17,6 +17,7 @@ set(nowrap_classes
   vtkOpenXRManagerGraphics
   vtkOpenXRManagerOpenGLGraphics
   vtkOpenXRManagerConnection
+  vtkOpenXREnvironmentDepthOcclusionPrePass
   )
 
 set(nowrap_headers

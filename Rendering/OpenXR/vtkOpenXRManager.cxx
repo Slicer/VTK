@@ -14,6 +14,11 @@
 #include "vtkStringFormatter.h"
 #include "vtkWindows.h" // Does nothing if we are not on windows
 
+// XR_USE_GRAPHICS_API_OPENGL must be defined before vtkOpenXRPlatform.h to
+// obtain XrSwapchainImageOpenGLKHR (needed for environment depth swapchain).
+#define XR_USE_GRAPHICS_API_OPENGL
+#include "vtkOpenXRPlatform.h"
+
 #include <cstring>
 
 #include <iostream>
@@ -134,11 +139,264 @@ bool vtkOpenXRManager::Initialize(vtkOpenXRRenderWindow* xrWindow)
 //------------------------------------------------------------------------------
 void vtkOpenXRManager::Finalize()
 {
+  // Stop environment depth and FB passthrough before destroying the session/instance.
+  this->StopEnvironmentDepth();
+  this->StopFBPassthrough();
   this->DestroyActionSets();
   xrRequestExitSession(this->Session);
   xrEndSession(this->Session);
   xrDestroySession(this->Session);
   xrDestroyInstance(this->Instance);
+}
+
+//------------------------------------------------------------------------------
+bool vtkOpenXRManager::StartFBPassthrough()
+{
+#ifdef XR_FB_passthrough
+  if (!this->OptionalExtensions.FBPassthroughSupported)
+  {
+    vtkWarningWithObjectMacro(nullptr, "XR_FB_passthrough is not supported by this runtime.");
+    return false;
+  }
+
+  xr::ExtensionDispatchTable ext;
+  ext.PopulateDispatchTable(this->Instance);
+
+  if (!ext.xrCreatePassthroughFB)
+  {
+    vtkWarningWithObjectMacro(
+      nullptr, "xrCreatePassthroughFB function pointer could not be loaded.");
+    return false;
+  }
+
+  // Create the passthrough object (requires session in IDLE or later state).
+  XrPassthroughCreateInfoFB passthroughInfo{ XR_TYPE_PASSTHROUGH_CREATE_INFO_FB };
+  passthroughInfo.flags = 0;
+  if (!this->XrCheckOutput(vtkOpenXRManager::ErrorOutput,
+        ext.xrCreatePassthroughFB(this->Session, &passthroughInfo, &this->FBPassthrough),
+        "Failed to create XR_FB_passthrough object"))
+  {
+    return false;
+  }
+
+  // Create a full-reconstruction passthrough layer (covers the full view).
+  XrPassthroughLayerCreateInfoFB layerInfo{ XR_TYPE_PASSTHROUGH_LAYER_CREATE_INFO_FB };
+  layerInfo.passthrough = this->FBPassthrough;
+  layerInfo.purpose = XR_PASSTHROUGH_LAYER_PURPOSE_RECONSTRUCTION_FB;
+  layerInfo.flags = XR_PASSTHROUGH_IS_RUNNING_AT_CREATION_BIT_FB;
+  if (!this->XrCheckOutput(vtkOpenXRManager::ErrorOutput,
+        ext.xrCreatePassthroughLayerFB(this->Session, &layerInfo, &this->FBPassthroughLayer),
+        "Failed to create XR_FB_passthrough layer"))
+  {
+    ext.xrDestroyPassthroughFB(this->FBPassthrough);
+    this->FBPassthrough = XR_NULL_HANDLE;
+    return false;
+  }
+
+  // Note: xrPassthroughStartFB is called from BeginSession() once the session
+  // is running (XR_SESSION_STATE_READY or later).
+  return true;
+#else
+  vtkWarningWithObjectMacro(
+    nullptr, "XR_FB_passthrough is not available in this OpenXR SDK build.");
+  return false;
+#endif
+}
+
+//------------------------------------------------------------------------------
+void vtkOpenXRManager::StopFBPassthrough()
+{
+#ifdef XR_FB_passthrough
+  if (!this->FBPassthroughActive)
+  {
+    return;
+  }
+
+  xr::ExtensionDispatchTable ext;
+  ext.PopulateDispatchTable(this->Instance);
+
+  if (ext.xrPassthroughPauseFB && this->FBPassthrough != XR_NULL_HANDLE)
+  {
+    ext.xrPassthroughPauseFB(this->FBPassthrough);
+  }
+  if (ext.xrDestroyPassthroughLayerFB && this->FBPassthroughLayer != XR_NULL_HANDLE)
+  {
+    ext.xrDestroyPassthroughLayerFB(this->FBPassthroughLayer);
+    this->FBPassthroughLayer = XR_NULL_HANDLE;
+  }
+  if (ext.xrDestroyPassthroughFB && this->FBPassthrough != XR_NULL_HANDLE)
+  {
+    ext.xrDestroyPassthroughFB(this->FBPassthrough);
+    this->FBPassthrough = XR_NULL_HANDLE;
+  }
+
+  this->FBPassthroughActive = false;
+#endif
+}
+
+//------------------------------------------------------------------------------
+bool vtkOpenXRManager::StartEnvironmentDepth()
+{
+#ifdef XR_META_environment_depth
+  if (!this->OptionalExtensions.EnvironmentDepthSupported)
+  {
+    vtkWarningWithObjectMacro(
+      nullptr, "XR_META_environment_depth is not supported by this runtime.");
+    return false;
+  }
+
+  xr::ExtensionDispatchTable ext;
+  ext.PopulateDispatchTable(this->Instance);
+
+  if (!ext.xrCreateEnvironmentDepthProviderMETA)
+  {
+    vtkWarningWithObjectMacro(
+      nullptr, "xrCreateEnvironmentDepthProviderMETA function pointer could not be loaded.");
+    return false;
+  }
+
+  // Create the depth provider.
+  XrEnvironmentDepthProviderCreateInfoMETA providerInfo{
+    XR_TYPE_ENVIRONMENT_DEPTH_PROVIDER_CREATE_INFO_META
+  };
+  providerInfo.createFlags = 0;
+  if (!this->XrCheckOutput(vtkOpenXRManager::WarningOutput,
+        ext.xrCreateEnvironmentDepthProviderMETA(
+          this->Session, &providerInfo, &this->EnvDepthProvider),
+        "Failed to create XR_META_environment_depth provider"))
+  {
+    return false;
+  }
+
+  // Create the depth swapchain.
+  XrEnvironmentDepthSwapchainCreateInfoMETA swapchainInfo{
+    XR_TYPE_ENVIRONMENT_DEPTH_SWAPCHAIN_CREATE_INFO_META
+  };
+  swapchainInfo.createFlags = 0;
+  if (!this->XrCheckOutput(vtkOpenXRManager::WarningOutput,
+        ext.xrCreateEnvironmentDepthSwapchainMETA(
+          this->EnvDepthProvider, &swapchainInfo, &this->EnvDepthSwapchain),
+        "Failed to create XR_META_environment_depth swapchain"))
+  {
+    ext.xrDestroyEnvironmentDepthProviderMETA(this->EnvDepthProvider);
+    this->EnvDepthProvider = XR_NULL_HANDLE;
+    return false;
+  }
+
+  // Enumerate swapchain images and store their GL texture IDs.
+  uint32_t imageCount = 0;
+  ext.xrEnumerateEnvironmentDepthSwapchainImagesMETA(
+    this->EnvDepthSwapchain, 0, &imageCount, nullptr);
+
+  std::vector<XrSwapchainImageOpenGLKHR> images(imageCount, { XR_TYPE_SWAPCHAIN_IMAGE_OPENGL_KHR });
+  ext.xrEnumerateEnvironmentDepthSwapchainImagesMETA(this->EnvDepthSwapchain, imageCount,
+    &imageCount, reinterpret_cast<XrSwapchainImageBaseHeader*>(images.data()));
+
+  this->EnvDepthTextureIds.resize(imageCount);
+  for (uint32_t i = 0; i < imageCount; ++i)
+  {
+    this->EnvDepthTextureIds[i] = images[i].image;
+  }
+
+  // Start the provider — this initiates depth capture.
+  if (!this->XrCheckOutput(vtkOpenXRManager::WarningOutput,
+        ext.xrStartEnvironmentDepthProviderMETA(this->EnvDepthProvider),
+        "Failed to start XR_META_environment_depth provider"))
+  {
+    ext.xrDestroyEnvironmentDepthSwapchainMETA(this->EnvDepthSwapchain);
+    this->EnvDepthSwapchain = XR_NULL_HANDLE;
+    ext.xrDestroyEnvironmentDepthProviderMETA(this->EnvDepthProvider);
+    this->EnvDepthProvider = XR_NULL_HANDLE;
+    return false;
+  }
+
+  this->EnvDepthActive = true;
+  vtkDebugWithObjectMacro(
+    nullptr, "Environment depth provider started (" << imageCount << " swapchain images).");
+  return true;
+#else
+  return false;
+#endif
+}
+
+//------------------------------------------------------------------------------
+void vtkOpenXRManager::StopEnvironmentDepth()
+{
+#ifdef XR_META_environment_depth
+  if (!this->EnvDepthActive)
+  {
+    return;
+  }
+
+  xr::ExtensionDispatchTable ext;
+  ext.PopulateDispatchTable(this->Instance);
+
+  if (ext.xrStopEnvironmentDepthProviderMETA && this->EnvDepthProvider != XR_NULL_HANDLE)
+  {
+    ext.xrStopEnvironmentDepthProviderMETA(this->EnvDepthProvider);
+  }
+  if (ext.xrDestroyEnvironmentDepthSwapchainMETA && this->EnvDepthSwapchain != XR_NULL_HANDLE)
+  {
+    ext.xrDestroyEnvironmentDepthSwapchainMETA(this->EnvDepthSwapchain);
+    this->EnvDepthSwapchain = XR_NULL_HANDLE;
+  }
+  if (ext.xrDestroyEnvironmentDepthProviderMETA && this->EnvDepthProvider != XR_NULL_HANDLE)
+  {
+    ext.xrDestroyEnvironmentDepthProviderMETA(this->EnvDepthProvider);
+    this->EnvDepthProvider = XR_NULL_HANDLE;
+  }
+
+  this->EnvDepthTextureIds.clear();
+  this->EnvDepthActive = false;
+#endif
+}
+
+//------------------------------------------------------------------------------
+bool vtkOpenXRManager::AcquireEnvironmentDepthImage()
+{
+#ifdef XR_META_environment_depth
+  xr::ExtensionDispatchTable ext;
+  ext.PopulateDispatchTable(this->Instance);
+
+  if (!ext.xrAcquireEnvironmentDepthImageMETA)
+  {
+    return false;
+  }
+
+  XrEnvironmentDepthImageAcquireInfoMETA acquireInfo{
+    XR_TYPE_ENVIRONMENT_DEPTH_IMAGE_ACQUIRE_INFO_META
+  };
+  acquireInfo.space = this->ReferenceSpace;
+  acquireInfo.displayTime = this->CurrentFrame.FrameState.predictedDisplayTime;
+
+  XrEnvironmentDepthImageMETA depthImage{ XR_TYPE_ENVIRONMENT_DEPTH_IMAGE_META };
+  depthImage.views[0] = { XR_TYPE_ENVIRONMENT_DEPTH_IMAGE_VIEW_META };
+  depthImage.views[1] = { XR_TYPE_ENVIRONMENT_DEPTH_IMAGE_VIEW_META };
+
+  if (!this->XrCheckOutput(vtkOpenXRManager::WarningOutput,
+        ext.xrAcquireEnvironmentDepthImageMETA(this->EnvDepthProvider, &acquireInfo, &depthImage),
+        "Failed to acquire environment depth image"))
+  {
+    return false;
+  }
+
+  if (depthImage.swapchainIndex >= this->EnvDepthTextureIds.size())
+  {
+    vtkWarningWithObjectMacro(nullptr,
+      "Environment depth swapchain index " << depthImage.swapchainIndex << " is out of range ("
+                                           << this->EnvDepthTextureIds.size() << " images).");
+    return false;
+  }
+
+  this->EnvDepthTextureId = this->EnvDepthTextureIds[depthImage.swapchainIndex];
+  this->EnvDepthViews[0] = depthImage.views[0];
+  this->EnvDepthViews[1] = depthImage.views[1];
+  this->EnvDepthNearZ = depthImage.nearZ;
+  this->EnvDepthFarZ = depthImage.farZ;
+  return true;
+#else
+  return false;
+#endif
 }
 
 //------------------------------------------------------------------------------
@@ -203,6 +461,26 @@ bool vtkOpenXRManager::BeginSession()
   vtkDebugWithObjectMacro(nullptr, "Session started.");
 
   this->SessionRunning = true;
+
+#ifdef XR_FB_passthrough
+  // Activate FB passthrough now that the session is running.
+  // The XrPassthroughFB and XrPassthroughLayerFB handles were created by
+  // StartFBPassthrough() while the session was still in IDLE state.
+  if (this->FBPassthrough != XR_NULL_HANDLE && !this->FBPassthroughActive)
+  {
+    xr::ExtensionDispatchTable ext;
+    ext.PopulateDispatchTable(this->Instance);
+    if (ext.xrPassthroughStartFB)
+    {
+      if (this->XrCheckOutput(vtkOpenXRManager::WarningOutput,
+            ext.xrPassthroughStartFB(this->FBPassthrough), "Failed to start XR_FB_passthrough"))
+      {
+        this->FBPassthroughActive = true;
+        vtkDebugWithObjectMacro(nullptr, "FB passthrough started.");
+      }
+    }
+  }
+#endif
 
   return true;
 }
@@ -298,6 +576,16 @@ bool vtkOpenXRManager::LocateViews()
     this->CurrentFrame.ShouldRender = false;
   }
 
+#ifdef XR_META_environment_depth
+  if (this->OptionalExtensions.EnvironmentDepthSupported && !this->EnvDepthActive)
+  {
+    this->StartEnvironmentDepth();
+  }
+  if (this->EnvDepthActive)
+  {
+    this->AcquireEnvironmentDepthImage();
+  }
+#endif
   return true;
 }
 
@@ -453,7 +741,24 @@ bool vtkOpenXRManager::EndFrame()
 
   XrCompositionLayerProjection layer{ XR_TYPE_COMPOSITION_LAYER_PROJECTION };
 
+#ifdef XR_FB_passthrough
+  XrCompositionLayerPassthroughFB passthroughCompositionLayer{
+    XR_TYPE_COMPOSITION_LAYER_PASSTHROUGH_FB
+  };
+#endif
+
   std::vector<XrCompositionLayerBaseHeader*> layers;
+
+#ifdef XR_FB_passthrough
+  if (this->FBPassthroughActive && this->FBPassthroughLayer != XR_NULL_HANDLE)
+  {
+    passthroughCompositionLayer.flags = 0;
+    passthroughCompositionLayer.space = XR_NULL_HANDLE;
+    passthroughCompositionLayer.layerHandle = this->FBPassthroughLayer;
+
+    layers.push_back(reinterpret_cast<XrCompositionLayerBaseHeader*>(&passthroughCompositionLayer));
+  }
+#endif
 
   // Projection layer
   if (shouldRender)
@@ -469,7 +774,8 @@ bool vtkOpenXRManager::EndFrame()
       return false;
     }
 
-    layer.layerFlags = this->OptionalExtensions.RemotingSupported
+    layer.layerFlags = (this->OptionalExtensions.RemotingSupported || this->FBPassthroughActive ||
+                         this->EnvDepthActive)
       ? XR_COMPOSITION_LAYER_BLEND_TEXTURE_SOURCE_ALPHA_BIT
       : 0;
 
@@ -761,6 +1067,60 @@ std::vector<const char*> vtkOpenXRManager::SelectExtensions(vtkOpenXRRenderWindo
       EnableExtensionIfSupported(XR_MSFT_SCENE_MARKER_EXTENSION_NAME);
   }
 
+  if (window->GetUsePassthrough())
+  {
+    this->OptionalExtensions.FBPassthroughSupported =
+      EnableExtensionIfSupported(XR_FB_PASSTHROUGH_EXTENSION_NAME);
+
+    // If XR_FB_passthrough is available, use OPAQUE blend mode — the camera feed
+    // is composited via a dedicated composition layer in EndFrame().  Only keep the
+    // ALPHA_BLEND preference as a fallback for runtimes that support it but not
+    // XR_FB_passthrough.
+    if (this->OptionalExtensions.FBPassthroughSupported)
+    {
+      this->PreferredEnvironmentBlendMode = XR_ENVIRONMENT_BLEND_MODE_MAX_ENUM;
+    }
+    else
+    {
+      // Log all extensions the runtime offers to aid diagnosis when passthrough
+      // is unavailable (e.g. Meta Quest Link requires the headset to have
+      // developer mode enabled and the Meta XR PC app to grant access).
+      std::string available;
+      for (uint32_t i = 0; i < extensionCount; i++)
+      {
+        if (i > 0)
+        {
+          available += ", ";
+        }
+        available += extensionProperties[i].extensionName;
+      }
+      vtkWarningWithObjectMacro(
+        nullptr, << "XR_FB_passthrough (\"" << XR_FB_PASSTHROUGH_EXTENSION_NAME
+                 << "\") is not in the runtime's extension list. "
+                 << "For Meta Quest Link, ensure developer mode is enabled on the headset "
+                 << "and passthrough access is granted in the Meta XR PC app settings. "
+                 << "Runtime offers " << extensionCount << " extension(s): " << available);
+    }
+
+#ifdef XR_META_environment_depth
+    // Only enable environment depth when real-world depth occlusion will actually be used
+    // (OccludedOpacity < 1.0).  Loading the extension when unused causes
+    // xrAcquireEnvironmentDepthImageMETA to run every frame (via BeginSession ->
+    // StartEnvironmentDepth -> WaitAndBeginFrame -> AcquireEnvironmentDepthImage),
+    // which blocks the render loop and produces position flickering.
+    if (window->GetOccludedOpacity() < 1.0f || window->GetCaptureEnvironmentDepth())
+    {
+      this->OptionalExtensions.EnvironmentDepthSupported =
+        EnableExtensionIfSupported(XR_META_ENVIRONMENT_DEPTH_EXTENSION_NAME);
+      if (!this->OptionalExtensions.EnvironmentDepthSupported)
+      {
+        vtkDebugWithObjectMacro(nullptr,
+          "XR_META_environment_depth is not available; real-world depth occlusion disabled.");
+      }
+    }
+#endif
+  }
+
   this->PrintOptionalExtensions();
 
   return enabledExtensions;
@@ -804,6 +1164,14 @@ void vtkOpenXRManager::PrintOptionalExtensions()
   if (this->OptionalExtensions.SceneMarkerSupported)
   {
     std::cout << "Optional extensions Scene Marker is supported" << std::endl;
+  }
+  if (this->OptionalExtensions.FBPassthroughSupported)
+  {
+    std::cout << "Optional extensions XR_FB_passthrough is supported" << std::endl;
+  }
+  if (this->OptionalExtensions.EnvironmentDepthSupported)
+  {
+    std::cout << "Optional extensions XR_META_environment_depth is supported" << std::endl;
   }
 }
 
@@ -959,8 +1327,26 @@ bool vtkOpenXRManager::CreateSystemProperties()
         &count, environmentBlendModes.data()),
       "Failed to enumerate environment blend modes");
 
-    // Pick the system's preferred blend mode.
+    // If a preferred blend mode was requested and the runtime supports it, use it.
+    // Otherwise fall back to the runtime's first (most preferred) mode.
     this->EnvironmentBlendMode = environmentBlendModes[0];
+    if (this->PreferredEnvironmentBlendMode != XR_ENVIRONMENT_BLEND_MODE_MAX_ENUM)
+    {
+      for (const XrEnvironmentBlendMode& mode : environmentBlendModes)
+      {
+        if (mode == this->PreferredEnvironmentBlendMode)
+        {
+          this->EnvironmentBlendMode = mode;
+          break;
+        }
+      }
+      if (this->EnvironmentBlendMode != this->PreferredEnvironmentBlendMode)
+      {
+        vtkWarningWithObjectMacro(nullptr,
+          "Requested environment blend mode is not supported by the runtime. "
+          "Falling back to the runtime's preferred blend mode.");
+      }
+    }
   }
 
   this->PrintSupportedViewConfigs();
