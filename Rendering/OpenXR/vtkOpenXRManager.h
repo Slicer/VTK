@@ -46,6 +46,20 @@ public:
   }
   ///@}
 
+  struct vtkOpenXRFrameContext
+  {
+    XrFrameState FrameState{ XR_TYPE_FRAME_STATE };
+
+    bool ShouldRender{ false };
+
+    XrViewState ViewState{ XR_TYPE_VIEW_STATE };
+    std::vector<XrView> Views;
+
+    bool PoseValid{ false };
+
+    XrFrameEndInfo EndInfo{ XR_TYPE_FRAME_END_INFO };
+  };
+
   enum OutputLevel
   {
     DebugOutput = 0,
@@ -151,7 +165,7 @@ public:
     {
       return nullptr;
     }
-    return &(this->RenderResources->Views[eye].pose);
+    return &(this->CurrentFrame.Views[eye].pose);
   }
   ///@}
 
@@ -167,7 +181,7 @@ public:
     {
       return nullptr;
     }
-    return &(this->RenderResources->Views[eye].fov);
+    return &(this->CurrentFrame.Views[eye].fov);
   }
   ///@}
 
@@ -196,7 +210,7 @@ public:
    * This value is updated each time we call WaitAndBeginFrame and
    * EndFrame.
    */
-  bool GetShouldRenderCurrentFrame() { return this->ShouldRenderCurrentFrame; }
+  bool GetShouldRenderCurrentFrame() { return this->CurrentFrame.ShouldRender; }
   ///@}
 
   ///@{
@@ -236,6 +250,27 @@ public:
    * eye / display
    */
   bool WaitAndBeginFrame();
+  ///@}
+
+  ///@{
+  /**/
+  bool LocateViews();
+  ///@}
+
+  ///@{
+  /**
+   * Accessors for the current frame's state. CurrentFrame is the single source
+   * of truth for per-frame data (timing, view pose/projection, render flag).
+   * It is established by WaitAndBeginFrame() (timing) and LocateViews() (views,
+   * pose validity), and consumed by EndFrame(). Callers outside the frame
+   * loop should treat returned values as a snapshot of the most recent frame.
+   */
+  const vtkOpenXRFrameContext& GetCurrentFrame() const { return this->CurrentFrame; }
+  XrTime GetPredictedDisplayTime() const { return this->CurrentFrame.FrameState.predictedDisplayTime; }
+  bool GetShouldRender() const { return this->CurrentFrame.ShouldRender; }
+  bool GetPoseValid() const { return this->CurrentFrame.PoseValid; }
+  const XrViewState& GetViewState() const { return this->CurrentFrame.ViewState; }
+  const std::vector<XrView>& GetViews() const { return this->CurrentFrame.Views; }
   ///@}
 
   ///@{
@@ -316,9 +351,24 @@ public:
    * Creates one action with name \p name and localizedName \p localizedName
    * and store the action handle inside \p actionT using the selected
    * active action set.
+   *
+   * For pose actions the per-hand XrSpace must be created separately via
+   * CreateActionPoseSpaces() AFTER AttachSessionActionSets() has been called.
+   * Some runtimes (Meta Quest) return a non-trackable space if xrCreateActionSpace
+   * is invoked before the parent action set has been attached to the session.
    */
   bool CreateOneAction(
     Action_t& actionT, const std::string& name, const std::string& localizedName);
+  ///@}
+
+  ///@{
+  /**
+   * Create the per-hand XrSpace for a pose action. Must be called AFTER
+   * AttachSessionActionSets(); calling it earlier yields spaces that
+   * xrLocateSpace will report as not located on Meta Quest. No-op for
+   * non-pose actions.
+   */
+  bool CreateActionPoseSpaces(Action_t& actionT);
   ///@}
 
   ///@{
@@ -416,13 +466,6 @@ public:
    * Return XrSpace associated with the XrSession
    */
   XrSpace GetReferenceSpace() const { return this->ReferenceSpace; }
-
-  /**
-   * Return runtime predicted display time for next frame.
-   * This may be needed for some OpenXR API calls that requires time information.
-   * This is updated by `WaitAndBeginFrame()`
-   */
-  XrTime GetPredictedDisplayTime() const { return this->PredictedDisplayTime; }
 
 protected:
   vtkOpenXRManager();
@@ -612,9 +655,6 @@ protected:
    */
   struct RenderResources_t
   {
-    XrViewState ViewState{ XR_TYPE_VIEW_STATE };
-    // Each physical Display/Eye is described by a view
-    std::vector<XrView> Views;
     // One configuration view per view : this store
     std::vector<XrViewConfigurationView> ConfigViews;
 
@@ -633,22 +673,30 @@ protected:
   std::vector<XrActionSet> ActionSets;
   XrActionSet* ActiveActionSet = nullptr;
 
-  /**
-   * Store the frame predicted display time in WaitAndBeginFrame
-   * To get the action data at this time and to submit it in EndFrame
-   */
-  XrTime PredictedDisplayTime;
+  // Single source of truth for per-frame state. Established by
+  // WaitAndBeginFrame()/LocateViews(), consumed by EndFrame() and
+  // UpdateActionData(). Public getters expose specific fields.
+  vtkOpenXRFrameContext CurrentFrame;
 
   bool SessionRunning = false;
-  // Following each WaitAndBeginFrame operation, the OpenXR runtime may indicate
-  // whether the current frame should be rendered using the `XrFrameState.shouldRender`
-  // property. We store this information to optimize rendering and prevent unnecessary
-  // render calls. For further details, refer to:
-  // https://registry.khronos.org/OpenXR/specs/1.0/man/html/XrFrameState.html
-  bool ShouldRenderCurrentFrame = false;
+  // Set to true by WaitAndBeginFrame() and reset by EndFrame().
+  // Prevents double-calling xrWaitFrame/xrBeginFrame when
+  // WaitAndBeginFrame() is invoked before PollXrActions() (to get
+  // correct PredictedDisplayTime) and then again inside Render().
+  bool FrameBegan = false;
   // If true, the function UpdateActionData will store
   // pose velocities for pose actions
   bool StorePoseVelocities = false;
+
+  // Last view state and views for which the position and orientation valid bits
+  // were set. Used to fall back to a known-good pose when xrLocateViews returns
+  // invalid flags (e.g. during startup warm-up or brief tracking loss), so that
+  // we always submit a valid projection layer and avoid a black screen on
+  // passthrough headsets that use XR_ENVIRONMENT_BLEND_MODE_OPAQUE.
+  // viewStateFlags is zero-initialized, so the cache is considered empty until
+  // a valid frame has been received.
+  XrViewState LastValidViewState{ XR_TYPE_VIEW_STATE };
+  std::vector<XrView> LastValidViews;
 
   vtkSmartPointer<vtkOpenXRManagerGraphics> GraphicsStrategy;
 

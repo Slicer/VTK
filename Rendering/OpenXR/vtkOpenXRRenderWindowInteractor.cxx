@@ -55,21 +55,43 @@ void vtkOpenXRRenderWindowInteractor::DoOneEvent(
 {
   this->ProcessXrEvents();
 
-  if (this->Done || !vtkOpenXRManager::GetInstance().IsSessionRunning())
+  vtkOpenXRManager* xrManager = &vtkOpenXRManager::GetInstance();
+  if (this->Done || !xrManager->IsSessionRunning())
   {
     return;
   }
 
+  // Per-frame state is owned by xrManager->CurrentFrame; access via the
+  // GetPredictedDisplayTime / GetShouldRender / GetViews / GetViewState getters.
+  if (!xrManager->WaitAndBeginFrame())
+  {
+    return;
+  }
+
+  // Sync actions before locating views.  The Meta Quest runtime requires
+  // xrSyncActions to have been called before xrLocateViews will return valid
+  // XR_VIEW_STATE_POSITION_VALID_BIT / XR_VIEW_STATE_ORIENTATION_VALID_BIT flags.
+  xrManager->SyncActions();
+
   this->PollXrActions();
+
+  if (!xrManager->LocateViews())
+  {
+    return;
+  }
 
   if (this->RecognizeGestures)
   {
     this->RecognizeComplexGesture(nullptr);
   }
 
-  // Start a render
-  this->InvokeEvent(vtkCommand::RenderEvent);
-  renWin->Render();
+  if (xrManager->GetShouldRender())
+  {
+    this->InvokeEvent(vtkCommand::RenderEvent);
+    renWin->Render();
+  }
+
+  xrManager->EndFrame();
 }
 
 //------------------------------------------------------------------------------
@@ -228,9 +250,6 @@ void vtkOpenXRRenderWindowInteractor::ConvertOpenXRPoseToWorldCoordinates(const 
 //------------------------------------------------------------------------------
 void vtkOpenXRRenderWindowInteractor::PollXrActions()
 {
-  // Update the action states by syncing using the active action set
-  vtkOpenXRManager::GetInstance().SyncActions();
-
   // Iterate over all actions and update their data
   MapAction::iterator it;
   for (it = this->MapActionStruct_Name.begin(); it != this->MapActionStruct_Name.end(); ++it)
@@ -266,28 +285,58 @@ void vtkOpenXRRenderWindowInteractor::PollXrActions()
     XrPosef* handPose = this->GetHandPose(hand);
     if (handPose)
     {
-      this->ConvertOpenXRPoseToWorldCoordinates(*handPose, pos, wxyz, ppos, wdir);
-      auto edHand = vtkEventDataDevice3D::New();
+      ActionData* adHandPose = this->MapActionStruct_Name["handpose"];
+      XrSpaceLocationFlags requiredLocationFlags =
+        XR_SPACE_LOCATION_POSITION_VALID_BIT | XR_SPACE_LOCATION_ORIENTATION_VALID_BIT;
+      bool handPoseValid = (adHandPose->ActionStruct.PoseLocations[hand].locationFlags &
+                             requiredLocationFlags) == requiredLocationFlags;
+
+      vtkNew<vtkEventDataDevice3D> edHand;
       edHand->SetDevice(hand == vtkOpenXRManager::ControllerIndex::Right
           ? vtkEventDataDevice::RightController
           : vtkEventDataDevice::LeftController);
-      edHand->SetWorldPosition(pos);
-      edHand->SetWorldOrientation(wxyz);
-      edHand->SetWorldDirection(wdir);
-      eventDatas[hand].TakeReference(edHand);
-
-      // We should remove this and use event data directly
       int pointerIndex = static_cast<int>(edHand->GetDevice());
-      this->SetPhysicalEventPosition(ppos[0], ppos[1], ppos[2], pointerIndex);
-      this->SetWorldEventPosition(pos[0], pos[1], pos[2], pointerIndex);
-      this->SetWorldEventOrientation(wxyz[0], wxyz[1], wxyz[2], wxyz[3], pointerIndex);
 
-      // Update DeviceToPhysical matrices, this is a read-write access!
-      vtkMatrix4x4* devicePose = renWin->GetDeviceToPhysicalMatrixForDevice(edHand->GetDevice());
-      if (devicePose)
+      if (handPoseValid)
       {
-        vtkOpenXRUtilities::SetMatrixFromXrPose(devicePose, *handPose);
+        // Pose is valid: convert to world coordinates and update all state.
+        this->ConvertOpenXRPoseToWorldCoordinates(*handPose, pos, wxyz, ppos, wdir);
+        edHand->SetWorldPosition(pos);
+        edHand->SetWorldOrientation(wxyz);
+        edHand->SetWorldDirection(wdir);
+
+        // We should remove this and use event data directly
+        this->SetPhysicalEventPosition(ppos[0], ppos[1], ppos[2], pointerIndex);
+        this->SetWorldEventPosition(pos[0], pos[1], pos[2], pointerIndex);
+        this->SetWorldEventOrientation(wxyz[0], wxyz[1], wxyz[2], wxyz[3], pointerIndex);
+
+        // Update DeviceToPhysical matrices, this is a read-write access!
+        vtkMatrix4x4* devicePose = renWin->GetDeviceToPhysicalMatrixForDevice(edHand->GetDevice());
+        if (devicePose)
+        {
+          vtkOpenXRUtilities::SetMatrixFromXrPose(devicePose, *handPose);
+        }
       }
+      else
+      {
+        // Pose is invalid or untracked.  Populate the event data from the
+        // last known-valid world state so that downstream handlers (Dolly3D,
+        // PositionProp, etc.) do not receive garbage coordinates and produce
+        // spurious world movement.  The stored event positions are NOT updated
+        // so they continue to reflect the last valid tracked pose.
+        double* lastPos = this->GetWorldEventPosition(pointerIndex);
+        double* lastOri = this->GetWorldEventOrientation(pointerIndex);
+        if (lastPos)
+        {
+          edHand->SetWorldPosition(lastPos);
+        }
+        if (lastOri)
+        {
+          edHand->SetWorldOrientation(lastOri);
+        }
+      }
+
+      eventDatas[hand] = edHand;
     }
   }
 
@@ -567,6 +616,28 @@ void vtkOpenXRRenderWindowInteractor::Initialize()
   {
     this->Initialized = false;
     return;
+  }
+
+  // Pose action spaces must be created AFTER xrAttachSessionActionSets - see vtkOpenXRManager::CreateOneAction
+  // for the motivation.  Walk the action map and create the per-hand XrSpace for every pose action now that 
+  // the action set is attached.
+  for (auto& actionEntry : this->MapActionStruct_Name)
+  {
+    ActionData* actionData = actionEntry.second;
+    if (actionData == nullptr)
+    {
+      continue;
+    }
+    if (actionData->ActionStruct.ActionType != XR_ACTION_TYPE_POSE_INPUT)
+    {
+      continue;
+    }
+    if (!vtkOpenXRManager::GetInstance().CreateActionPoseSpaces(actionData->ActionStruct))
+    {
+      vtkErrorMacro(<< "Failed to create pose spaces for action " << actionEntry.first);
+      this->Initialized = false;
+      return;
+    }
   }
 }
 
