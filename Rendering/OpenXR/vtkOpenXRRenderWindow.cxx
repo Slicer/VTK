@@ -435,8 +435,8 @@ void vtkOpenXRRenderWindow::StereoMidpoint()
       // Debug visualisation overlay (shown only when explicitly enabled).
       if (this->ShowEnvDepthDebugVisualization)
       {
-        this->EnvDepthPrePass->DebugVisualize(
-          LEFT_EYE, cam, xrManager.GetEnvDepthTextureId(), xrManager.GetEnvDepthViews());
+        this->EnvDepthPrePass->DebugVisualize(LEFT_EYE, cam, xrManager.GetEnvDepthTextureId(),
+          xrManager.GetEnvDepthViews(), static_cast<float>(this->GetPhysicalScale()));
       }
       // Post-pass: alpha-based occlusion uses the scene's depth buffer,
       // so it runs AFTER the scene render and BEFORE blitting the eye.
@@ -472,8 +472,8 @@ void vtkOpenXRRenderWindow::StereoRenderComplete()
       // Debug visualisation overlay.
       if (this->ShowEnvDepthDebugVisualization)
       {
-        this->EnvDepthPrePass->DebugVisualize(
-          RIGHT_EYE, cam, xrManager.GetEnvDepthTextureId(), xrManager.GetEnvDepthViews());
+        this->EnvDepthPrePass->DebugVisualize(RIGHT_EYE, cam, xrManager.GetEnvDepthTextureId(),
+          xrManager.GetEnvDepthViews(), static_cast<float>(this->GetPhysicalScale()));
       }
       // Post-pass for the right eye.
       if (this->OccludedOpacity < 1.0f)

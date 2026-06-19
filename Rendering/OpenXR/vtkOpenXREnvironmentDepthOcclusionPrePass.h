@@ -66,7 +66,7 @@ public:
    * compositor (i.e. before RenderOneEye / swapchain release).
    */
   void DebugVisualize(uint32_t eye, vtkCamera* camera, uint32_t envDepthGLTexture,
-    const XrEnvironmentDepthImageViewMETA views[2]);
+    const XrEnvironmentDepthImageViewMETA views[2], float physicalScale = 1.0f);
 
   /**
    * Post-pass for partial real-world occlusion.

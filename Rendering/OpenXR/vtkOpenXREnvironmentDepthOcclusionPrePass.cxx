@@ -750,7 +750,7 @@ void vtkOpenXREnvironmentDepthOcclusionPrePass::BuildDebugProgram()
 
 //------------------------------------------------------------------------------
 void vtkOpenXREnvironmentDepthOcclusionPrePass::DebugVisualize(uint32_t eye, vtkCamera* camera,
-  uint32_t envDepthGLTexture, const XrEnvironmentDepthImageViewMETA views[2])
+  uint32_t envDepthGLTexture, const XrEnvironmentDepthImageViewMETA views[2], float physicalScale)
 {
   if (!camera)
   {
@@ -777,8 +777,8 @@ void vtkOpenXREnvironmentDepthOcclusionPrePass::DebugVisualize(uint32_t eye, vtk
   // ------------------------------------------------------------------
   double clippingRange[2];
   camera->GetClippingRange(clippingRange);
-  const float nearZ = static_cast<float>(clippingRange[0]);
-  const float farZ  = static_cast<float>(clippingRange[1]);
+  const float nearZ = static_cast<float>(clippingRange[0]) / physicalScale;
+  const float farZ  = static_cast<float>(clippingRange[1]) / physicalScale;
 
   vtkOpenXRManager& mgr = vtkOpenXRManager::GetInstance();
   const XrPosef* vrEyePosePtr = mgr.GetViewPose(eye);

@@ -217,8 +217,11 @@ public:
   bool IsFBPassthroughActive() { return this->FBPassthroughActive; }
 
   /**
-   * Start Meta XR_FB_passthrough.  Creates the passthrough object and layer,
-   * sets FBPassthroughActive on success.  Must be called after Initialize().
+   * Start Meta XR_FB_passthrough.
+   *
+   * Creates the passthrough object and layer. FBPassthroughActive becomes true
+   * only after xrPassthroughStartFB succeeds (triggered from BeginSession()).
+   * Must be called after Initialize().
    * A passthrough composition layer will be prepended in every EndFrame() call
    * while active, so that the camera feed appears as the background.
    */
@@ -326,7 +329,10 @@ public:
    * loop should treat returned values as a snapshot of the most recent frame.
    */
   const vtkOpenXRFrameContext& GetCurrentFrame() const { return this->CurrentFrame; }
-  XrTime GetPredictedDisplayTime() const { return this->CurrentFrame.FrameState.predictedDisplayTime; }
+  XrTime GetPredictedDisplayTime() const
+  {
+    return this->CurrentFrame.FrameState.predictedDisplayTime;
+  }
   bool GetShouldRender() const { return this->CurrentFrame.ShouldRender; }
   bool GetPoseValid() const { return this->CurrentFrame.PoseValid; }
   const XrViewState& GetViewState() const { return this->CurrentFrame.ViewState; }
@@ -543,10 +549,7 @@ public:
   {
     return this->PreferredEnvironmentBlendMode;
   }
-  XrEnvironmentBlendMode GetEnvironmentBlendMode() const
-  {
-    return this->EnvironmentBlendMode;
-  }
+  XrEnvironmentBlendMode GetEnvironmentBlendMode() const { return this->EnvironmentBlendMode; }
   ///@}
 
 protected:

@@ -216,8 +216,8 @@ public:
    * If the runtime does not support `XR_ENVIRONMENT_BLEND_MODE_ALPHA_BLEND`
    * the request is silently ignored and VR (opaque) rendering is used.
    *
-   * The renderer background is automatically set to fully transparent when
-   * passthrough is enabled so passthrough is visible.
+   * For passthrough to be visible, the renderer background alpha must be 0
+   * (transparent) so the runtime can blend real-world content behind the scene.
    *
    * Default value: `false`
    */
@@ -231,11 +231,10 @@ public:
    * Set the opacity of virtual geometry that is occluded by real-world surfaces
    * when environment-depth occlusion (`XR_META_environment_depth`) is active.
    *
-   * - 0.0 (default): fully occluded — virtual objects behind real surfaces are
-   *   invisible (hard occlusion using a depth pre-pass).
+   * - 1.0 (default): no occlusion — depth composition is skipped entirely.
    * - 0.0 < value < 1.0: partial occlusion — occluded pixels have their alpha
-   *   multiplied by this value (post-pass, scene renders normally).
-   * - 1.0: no occlusion — depth composition is skipped entirely.
+   *   multiplied by this value (post-pass).
+   * - 0.0: full occlusion — occluded pixels have their alpha set to 0 (post-pass).
    *
    * This must be set before or during rendering; changes take effect on the
    * next rendered frame.
