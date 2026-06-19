@@ -266,15 +266,18 @@ bool vtkOpenXRManager::StartFBPassthrough()
 void vtkOpenXRManager::StopFBPassthrough()
 {
 #ifdef XR_FB_passthrough
-  if (!this->FBPassthroughActive)
+  // Clean up resources even if passthrough was never successfully started.
+  if (this->FBPassthrough == XR_NULL_HANDLE && this->FBPassthroughLayer == XR_NULL_HANDLE)
   {
+    this->FBPassthroughActive = false;
     return;
   }
 
   xr::ExtensionDispatchTable ext;
   ext.PopulateDispatchTable(this->Instance);
 
-  if (ext.xrPassthroughPauseFB && this->FBPassthrough != XR_NULL_HANDLE)
+  if (this->FBPassthroughActive && ext.xrPassthroughPauseFB &&
+    this->FBPassthrough != XR_NULL_HANDLE)
   {
     ext.xrPassthroughPauseFB(this->FBPassthrough);
   }
@@ -344,12 +347,32 @@ bool vtkOpenXRManager::StartEnvironmentDepth()
 
   // Enumerate swapchain images and store their GL texture IDs.
   uint32_t imageCount = 0;
-  ext.xrEnumerateEnvironmentDepthSwapchainImagesMETA(
-    this->EnvDepthSwapchain, 0, &imageCount, nullptr);
+  if (!this->XrCheckOutput(vtkOpenXRManager::WarningOutput,
+        ext.xrEnumerateEnvironmentDepthSwapchainImagesMETA(
+          this->EnvDepthSwapchain, 0, &imageCount, nullptr),
+        "Failed to get environment depth swapchain image count") ||
+    imageCount == 0)
+  {
+    vtkWarningWithObjectMacro(nullptr, "Environment depth swapchain returned zero images.");
+    ext.xrDestroyEnvironmentDepthSwapchainMETA(this->EnvDepthSwapchain);
+    this->EnvDepthSwapchain = XR_NULL_HANDLE;
+    ext.xrDestroyEnvironmentDepthProviderMETA(this->EnvDepthProvider);
+    this->EnvDepthProvider = XR_NULL_HANDLE;
+    return false;
+  }
 
   std::vector<XrSwapchainImageOpenGLKHR> images(imageCount, { XR_TYPE_SWAPCHAIN_IMAGE_OPENGL_KHR });
-  ext.xrEnumerateEnvironmentDepthSwapchainImagesMETA(this->EnvDepthSwapchain, imageCount,
-    &imageCount, reinterpret_cast<XrSwapchainImageBaseHeader*>(images.data()));
+  if (!this->XrCheckOutput(vtkOpenXRManager::WarningOutput,
+        ext.xrEnumerateEnvironmentDepthSwapchainImagesMETA(this->EnvDepthSwapchain, imageCount,
+          &imageCount, reinterpret_cast<XrSwapchainImageBaseHeader*>(images.data())),
+        "Failed to enumerate environment depth swapchain images"))
+  {
+    ext.xrDestroyEnvironmentDepthSwapchainMETA(this->EnvDepthSwapchain);
+    this->EnvDepthSwapchain = XR_NULL_HANDLE;
+    ext.xrDestroyEnvironmentDepthProviderMETA(this->EnvDepthProvider);
+    this->EnvDepthProvider = XR_NULL_HANDLE;
+    return false;
+  }
 
   this->EnvDepthTextureIds.resize(imageCount);
   for (uint32_t i = 0; i < imageCount; ++i)
@@ -828,9 +851,17 @@ bool vtkOpenXRManager::EndFrame()
     // Guard against mismatch (prevents xrEndFrame rejection / undefined compositor behavior)
     if (viewCount == 0 || viewCount != this->GetViewCount())
     {
-      //vtkErrorMacro("EndFrame: invalid view count submission");
+      // Still end the frame to keep the frame loop consistent, but avoid
+      // submitting an invalid projection layer.
+      XrFrameEndInfo frameEndInfo{ XR_TYPE_FRAME_END_INFO };
+      frameEndInfo.displayTime = this->CurrentFrame.FrameState.predictedDisplayTime;
+      frameEndInfo.environmentBlendMode = this->EnvironmentBlendMode;
+      frameEndInfo.layerCount = static_cast<uint32_t>(layers.size());
+      frameEndInfo.layers = layers.empty() ? nullptr : layers.data();
+      const bool ok = this->XrCheckOutput(vtkOpenXRManager::ErrorOutput,
+        xrEndFrame(this->Session, &frameEndInfo), "xrEndFrame failed");
       this->FrameBegan = false;
-      return false;
+      return ok;
     }
 
     layer.layerFlags = (this->OptionalExtensions.RemotingSupported || this->FBPassthroughActive ||
@@ -1764,11 +1795,11 @@ bool vtkOpenXRManager::CreateOneAction(
     return false;
   }
 
-  // Pose action spaces are intentionally NOT created here.  The Meta Quest
+  // Pose action spaces are intentionally NOT created here. The Meta Quest
   // runtime requires xrAttachSessionActionSets to have been called before
   // xrCreateActionSpace; otherwise xrLocateSpace returns locationFlags=0
   // forever even though the underlying action becomes active and the
-  // interaction profile binds correctly.  The interactor is responsible for
+  // interaction profile binds correctly. The interactor is responsible for
   // calling CreateActionPoseSpaces() on every pose action AFTER
   // AttachSessionActionSets().
 

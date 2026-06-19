@@ -77,6 +77,7 @@ void vtkOpenXRRenderWindowInteractor::DoOneEvent(
 
   if (!xrManager->LocateViews())
   {
+    xrManager->EndFrame();
     return;
   }
 
