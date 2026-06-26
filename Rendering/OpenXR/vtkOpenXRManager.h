@@ -286,6 +286,17 @@ public:
 
   ///@{
   /**
+   * End the OpenXR session in response to XR_SESSION_STATE_STOPPING, without
+   * destroying the session or instance. If successful, SessionRunning becomes
+   * false. The runtime will later send XR_SESSION_STATE_READY again (e.g. once
+   * the headset is put back on), at which point BeginSession() can be called
+   * again to resume rendering on the same session.
+   */
+  bool EndSession();
+  ///@}
+
+  ///@{
+  /**
    * Return the OpenXR Session.
    */
   const XrSession& GetSession() { return this->Session; }

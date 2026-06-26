@@ -509,6 +509,29 @@ bool vtkOpenXRManager::BeginSession()
 }
 
 //------------------------------------------------------------------------------
+bool vtkOpenXRManager::EndSession()
+{
+  VTK_CHECK_NULL_XRHANDLE(this->Session, "vtkOpenXRManager::EndSession, Session");
+
+  if (!this->SessionRunning)
+  {
+    return true;
+  }
+
+  if (!this->XrCheckOutput(vtkOpenXRManager::WarningOutput, xrEndSession(this->Session),
+        "Failed to end session!"))
+  {
+    return false;
+  }
+
+  vtkDebugWithObjectMacro(nullptr, "Session stopped.");
+
+  this->SessionRunning = false;
+
+  return true;
+}
+
+//------------------------------------------------------------------------------
 bool vtkOpenXRManager::WaitAndBeginFrame()
 {
   // If a frame has already been started, skip xrWaitFrame/xrBeginFrame

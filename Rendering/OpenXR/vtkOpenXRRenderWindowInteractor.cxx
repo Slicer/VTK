@@ -209,9 +209,18 @@ void vtkOpenXRRenderWindowInteractor::vtkInternal::ProcessXrEvents()
             break;
           }
           case XR_SESSION_STATE_STOPPING:
-            vtkDebugWithObjectMacro(
-              this->Interactor, << "OpenXR event [XR_SESSION_STATE_STOPPING]");
-            [[fallthrough]];
+          {
+            // The runtime requests that the application stop rendering, e.g.
+            // because the headset was taken off. End the session but keep
+            // polling for events: the runtime will send XR_SESSION_STATE_READY
+            // again once the headset is put back on, which resumes rendering
+            // via BeginSession() above. Do not set this->Done here, otherwise
+            // the render loop would never recover without fully reinitializing
+            // the hardware connection.
+            vtkDebugWithObjectMacro(<< "OpenXR event [XR_SESSION_STATE_STOPPING] : End session");
+            xrManager.EndSession();
+            break;
+          }
           case XR_SESSION_STATE_LOSS_PENDING:
             // Session was lost, so start over and poll for new systemId.
             vtkDebugWithObjectMacro(
