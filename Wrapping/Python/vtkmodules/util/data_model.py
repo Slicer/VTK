@@ -25,13 +25,34 @@ from vtkmodules.vtkCommonDataModel import (
 
 import weakref
 
-NUMPY_AVAILABLE = False
+# numpy and the numpy_interface dataset_adapter are imported lazily so that merely
+# loading this module (which VTK does automatically, whenever a data-model module
+# such as vtkCommonDataModel is imported) does not import numpy.
+# numpy import is a heavy operation, which can take a few seconds on Windows
+# (due to antivirus scan of its binaries) and hundreds of milliseconds on other platforms.
+import importlib
+import importlib.util
 
-with suppress(ImportError):
-    import numpy
-    from vtkmodules.numpy_interface import dataset_adapter as dsa
+NUMPY_AVAILABLE = importlib.util.find_spec("numpy") is not None
 
-    NUMPY_AVAILABLE = True
+
+class _LazyModule:
+    """Import a module on first attribute access."""
+
+    def __init__(self, name):
+        self._name = name
+        self._module = None
+
+    def __getattr__(self, attr):
+        module = self.__dict__["_module"]
+        if module is None:
+            module = importlib.import_module(self.__dict__["_name"])
+            self._module = module
+        return getattr(module, attr)
+
+
+numpy = _LazyModule("numpy")
+dsa = _LazyModule("vtkmodules.numpy_interface.dataset_adapter")
 
 
 class FieldDataBase(object):

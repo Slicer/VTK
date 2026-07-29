@@ -20,7 +20,13 @@ objects in the global dispatch table used by pickle. NumPy is required as well s
 """
 
 try:
-    import copyreg, pickle, numpy
+    import copyreg, pickle
+
+    # To make VTK import into Python faster, numpy loading is delayed until it is actually needed.
+    import importlib.util
+    if importlib.util.find_spec("numpy") is None:
+        raise ImportError
+
 except ImportError:
     raise ImportError("This module depends on the pickle, copyreg, and numpy modules.\
  Please make sure that it is installed properly.")
@@ -63,6 +69,7 @@ def serialize_VTK_data_object(data_object):
 
       This is exactly the state dictionary that unserialize_VTK_data_object expects.
     """
+    import numpy
 
     if not data_object.IsA("vtkDataObject"):
         raise TypeError("Object passed to pickling should be a vtkDataObject")
