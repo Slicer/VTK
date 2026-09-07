@@ -14,6 +14,7 @@ set(python_tests
   TestConstructorArgs.py
   TestConstructorKwargs.py
   TestChar.py
+  TestClassModuleFinder.py
   TestDeprecated.py
   TestDataModel.py
   TestErrorObserver.py

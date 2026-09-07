@@ -165,3 +165,25 @@ def on_vtk_module_init_completed():
                 # the override registration silently; core VTK functionality
                 # is unaffected.
                 pass
+
+#------------------------------------------------------------------------------
+# Deferred import of the module that wraps a class.
+#
+# When a C++ method returns an object whose class has not been wrapped yet
+# (because the module that wraps it has not been imported), the wrapping
+# would return it as its nearest already-wrapped base class. Before doing so,
+# vtkPythonUtil looks up the class name (as returned by GetClassName()) in
+# this table and imports the module listed for it, so that applications that
+# import VTK modules lazily still get objects of the actual class. The table
+# is empty by default: applications fill it with register_class_modules().
+_CLASS_MODULES = {}
+
+def register_class_modules(mapping):
+    """Declare which module wraps each VTK class.
+
+    ``mapping`` maps a VTK class name to the name of the module that provides
+    it, either fully qualified or relative to this package."""
+    for class_name, module_name in mapping.items():
+        if not module_name.startswith("vtkmodules."):
+            module_name = "vtkmodules." + module_name
+        _CLASS_MODULES[class_name] = module_name
