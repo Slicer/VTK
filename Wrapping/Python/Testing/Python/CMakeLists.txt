@@ -12,6 +12,7 @@ set(python_tests
   TestComposite.py
   TestConstructorKwargs.py
   TestChar.py
+  TestClassModuleFinder.py
   TestDeprecated.py
   TestDataModel.py
   TestErrorObserver.py

@@ -429,18 +429,24 @@ PyObject* vtkPythonUtil::GetObjectFromPointer(vtkObjectBase* ptr)
   if (obj == nullptr)
   {
     // create a new object
-    PyVTKClass* vtkclass = nullptr;
-    vtkPythonClassMap::iterator k = vtkPythonMap->ClassMap->find(ptr->GetClassName());
-    if (k != vtkPythonMap->ClassMap->end())
+    const char* classname = ptr->GetClassName();
+    PyVTKClass* vtkclass = vtkPythonUtil::FindClass(classname);
+
+    // if the class was not in the map (or is only associated with its nearest
+    // base class, see below), the module that wraps it may simply not have
+    // been imported yet: give the vtkmodules package a chance to import it,
+    // so that the object is returned as its actual class instead of as its
+    // nearest already-wrapped base class
+    if ((vtkclass == nullptr || strcmp(vtkclass->vtk_name, classname) != 0) &&
+      vtkPythonUtil::ImportModuleForClass(classname))
     {
-      vtkclass = &k->second;
+      vtkclass = vtkPythonUtil::FindClass(classname);
     }
 
     // if the class was not in the map, then find the nearest base class
     // that is, and associate ptr->GetClassName() with that base class
     if (vtkclass == nullptr)
     {
-      const char* classname = ptr->GetClassName();
       vtkclass = vtkPythonUtil::FindNearestBaseClass(ptr);
       vtkPythonClassMap::iterator i = vtkPythonMap->ClassMap->find(classname);
       if (i == vtkPythonMap->ClassMap->end())
@@ -547,12 +553,23 @@ PyTypeObject* vtkPythonUtil::AddClassToMap(
 {
   // lets make sure it isn't already there
   vtkPythonClassMap::iterator i = vtkPythonMap->ClassMap->find(classname);
-  if (i == vtkPythonMap->ClassMap->end())
+  if (i != vtkPythonMap->ClassMap->end() && strcmp(i->second.vtk_name, classname) != 0)
+  {
+    // the entry is an alias to the nearest base class, added by
+    // GetObjectFromPointer() for an object whose class was not wrapped at
+    // the time: replace it in place (existing objects keep a valid pointer)
+    // so that the class is wrapped as itself from now on
+    i->second = PyVTKClass(pytype, methods, classname, constructor);
+  }
+  else if (i == vtkPythonMap->ClassMap->end())
   {
     i = vtkPythonMap->ClassMap->insert(i,
       vtkPythonClassMap::value_type(
         classname, PyVTKClass(pytype, methods, classname, constructor)));
+  }
 
+  if (i->second.py_type == pytype)
+  {
     // if Python type name differs from VTK ClassName, store in ClassNameMap
     // (this only occurs for templated classes, due to their GetClassName()
     // implementation in their type macro in vtkSetGet.h)
@@ -1055,6 +1072,70 @@ bool vtkPythonUtil::ImportModule(const char* fullname, PyObject* globals)
 
   Py_DECREF(m);
   return true;
+}
+
+//------------------------------------------------------------------------------
+bool vtkPythonUtil::ImportModuleForClass(const char* classname)
+{
+  // "vtkmodules._CLASS_MODULES" maps a VTK class name to the module that wraps
+  // it (see vtkmodules.register_class_modules).  It is optional: while it is
+  // empty, an object of a class that is not wrapped yet is returned as its
+  // nearest wrapped base class, as before.
+  // State: -1 not looked up yet, 0 unavailable, 1 available.
+  static int tableState = -1;
+  static PyObject* classModules = nullptr;
+
+  // Do not call into Python while an exception is being propagated
+  if (PyErr_Occurred())
+  {
+    return false;
+  }
+
+  if (tableState == -1)
+  {
+    tableState = 0;
+    PyObject* module = PyImport_ImportModule("vtkmodules");
+    if (module)
+    {
+      PyObject* table = PyObject_GetAttrString(module, "_CLASS_MODULES");
+      if (table && PyDict_Check(table))
+      {
+        // the reference is kept for the lifetime of the interpreter, so that
+        // entries registered later are seen without looking the table up again
+        classModules = table;
+        tableState = 1;
+      }
+      else
+      {
+        Py_XDECREF(table);
+      }
+      Py_DECREF(module);
+    }
+    PyErr_Clear();
+  }
+
+  if (tableState != 1)
+  {
+    return false;
+  }
+
+  PyObject* moduleName = PyDict_GetItemString(classModules, classname); // borrowed
+  if (moduleName == nullptr || !PyUnicode_Check(moduleName))
+  {
+    PyErr_Clear();
+    return false;
+  }
+
+  const char* name = PyUnicode_AsUTF8(moduleName);
+  if (name == nullptr)
+  {
+    PyErr_Clear();
+    return false;
+  }
+
+  // failure to import is not an error, the caller falls back to the
+  // nearest base class that is already wrapped
+  return vtkPythonUtil::ImportModule(name, nullptr);
 }
 
 //------------------------------------------------------------------------------

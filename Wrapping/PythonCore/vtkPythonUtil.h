@@ -228,6 +228,17 @@ public:
   static bool ImportModule(const char* name, PyObject* globals);
 
   /**
+   * Try to import the Python module that wraps the given VTK class, using
+   * the table populated through vtkmodules.register_class_modules().  This
+   * is used when an object of a class that has not been wrapped yet is
+   * returned to Python, so that the object can be wrapped as its actual
+   * class rather than as its nearest base class that is already wrapped.
+   * A return value of "false" indicates that the table does not list the
+   * class or that the import failed, no exception is set.
+   */
+  static bool ImportModuleForClass(const char* classname);
+
+  /**
    * Modules call this to add themselves to the list of loaded modules.
    * This is needed because we do not know how the modules are arranged
    * within their package, so searching sys.modules is unreliable.  It is
