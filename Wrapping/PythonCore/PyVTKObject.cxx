@@ -717,6 +717,12 @@ PyObject* PyVTKObject_FromPointer(PyTypeObject* pytype, PyObject* ghostdict, vtk
       if (std::string(newclassname) != classname)
       {
         PyVTKClass* newclass = vtkPythonUtil::FindClass(newclassname);
+        if ((newclass == nullptr || strcmp(newclass->vtk_name, newclassname) != 0) &&
+          vtkPythonUtil::ImportModuleForClass(newclassname))
+        {
+          // the module that wraps the factory-created class was not imported yet
+          newclass = vtkPythonUtil::FindClass(newclassname);
+        }
         if (newclass)
         {
           classname = newclassname;

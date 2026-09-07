@@ -1,4 +1,5 @@
 vtk_add_test_cxx(vtkPythonInterpreterCxxTests tests
+  TestPythonClassModuleFinder.cxx,NO_DATA,NO_VALID,NO_OUTPUT
   TestPythonCppObjectWrapping.cxx,NO_DATA,NO_VALID,NO_OUTPUT
 )
 vtk_test_cxx_executable(vtkPythonInterpreterCxxTests tests)
