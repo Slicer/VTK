@@ -110,8 +110,10 @@ public:
    * Specify absolute tolerance (in world coordinates) for performing
    * geometric operations.
    */
-  vtkSetClampMacro(Tolerance, double, 0.0, VTK_DOUBLE_MAX);
-  vtkGetMacro(Tolerance, double);
+  void SetTolerance(double vtkNotUsed(tol)) {}
+  double GetToleranceMinValue() VTK_FUTURE_CONST { return 0.0; }
+  double GetToleranceMaxValue() VTK_FUTURE_CONST { return VTK_DOUBLE_MAX; }
+  double GetToleranceDefaultValue() VTK_FUTURE_CONST { return 0.001; }
   ///@}
 
   ///@{
@@ -194,7 +196,6 @@ protected:
   vtkDataSet* DataSet;
   vtkTypeBool UseExistingSearchStructure;
   vtkTypeBool Automatic; // boolean controls automatic subdivision (or uses user spec.)
-  double Tolerance;      // for performing merging
   int MaxLevel;
   int Level;
 

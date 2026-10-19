@@ -74,7 +74,6 @@
  *
  * vtkModifiedBSPTree does NOT utilize the following parameters:
  * - Automatic
- * - Tolerance
  * - RetainCellLists
  *
  * NB. The following reference has been sent to me
@@ -155,6 +154,7 @@ public:
 
   // Reuse any superclass signatures that we don't override.
   using vtkAbstractCellLocator::FindCell;
+  using vtkAbstractCellLocator::FindCellsAlongLine;
   using vtkAbstractCellLocator::IntersectWithLine;
 
   /**
@@ -170,27 +170,13 @@ public:
    * Take the passed line segment and intersect it with the data set.
    * The return value of the function is 0 if no intersections were found.
    * For each intersection with the bounds of a cell or with a cell (if a cell is provided),
-   * the points and cellIds have the relevant information added sorted by t.
-   * If points or cellIds are nullptr pointers, then no information is generated for that list.
+   * the points and cellIds have the relevant information added sorted by their parametric distance
+   * t. If points or cellIds are nullptr pointers, then no information is generated for that list.
    *
    * For other IntersectWithLine signatures, see vtkAbstractCellLocator.
    */
   int IntersectWithLine(const double p1[3], const double p2[3], double tol, vtkPoints* points,
     vtkIdList* cellIds, vtkGenericCell* cell) override;
-
-  /**
-   * Take the passed line segment and intersect it with the data set.
-   * For each intersection with the bounds of a cell, the cellIds
-   * have the relevant information added sort by t. If cellIds is nullptr
-   * pointer, then no information is generated for that list.
-   *
-   * Reimplemented from vtkAbstractCellLocator to showcase that it's a supported function.
-   */
-  void FindCellsAlongLine(
-    const double p1[3], const double p2[3], double tolerance, vtkIdList* cellsIds) override
-  {
-    this->Superclass::FindCellsAlongLine(p1, p2, tolerance, cellsIds);
-  }
 
   /**
    * Find the cell containing a given point. returns -1 if no cell found
@@ -199,7 +185,7 @@ public:
    *
    * For other FindCell signatures, see vtkAbstractCellLocator.
    */
-  vtkIdType FindCell(double x[3], double vtkNotUsed(tol2), vtkGenericCell* GenCell, int& subId,
+  vtkIdType FindCell(double x[3], double tol2, vtkGenericCell* GenCell, int& subId,
     double pcoords[3], double* weights) override;
 
   /**

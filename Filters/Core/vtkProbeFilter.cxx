@@ -76,6 +76,7 @@ vtkProbeFilter::vtkProbeFilter()
   this->Tolerance = 1.0;
   this->ComputeTolerance = true;
   this->SnapToCellWithClosestPoint = false;
+  this->SnappingRadius = std::numeric_limits<double>::infinity();
 }
 
 //------------------------------------------------------------------------------
@@ -409,15 +410,11 @@ class vtkProbeFilter::ProbeEmptyPointsWorklet
   struct LocalData
   {
     vtkSmartPointer<vtkFindCellStrategy> Strategy;
-    vtkCellLocatorStrategy* CellLocatorStrategy;
-    vtkClosestPointStrategy* ClosestPointStrategy;
     vtkSmartPointer<vtkGenericCell> CurrentCell;
-    vtkSmartPointer<vtkGenericCell> LastCell;
     std::vector<double> Weights;
     double LastPCoords[3];
     int LastSubId;
     double LastClosestPoint[3];
-    vtkBoundingBox LastBBox;
     double LastLength2;
     vtkIdType LastCellId;
   };
@@ -453,17 +450,12 @@ public:
       tlData.Strategy = vtk::TakeSmartPointer(this->Strategy->NewInstance());
       tlData.Strategy->CopyParameters(this->Strategy);
       tlData.Strategy->Initialize(vtkPointSet::SafeDownCast(this->Source));
-      tlData.CellLocatorStrategy = vtkCellLocatorStrategy::SafeDownCast(tlData.Strategy);
-      tlData.ClosestPointStrategy = vtkClosestPointStrategy::SafeDownCast(tlData.Strategy);
     }
     else
     {
       tlData.Strategy = nullptr;
-      tlData.CellLocatorStrategy = nullptr;
-      tlData.ClosestPointStrategy = nullptr;
     }
     tlData.CurrentCell = vtkSmartPointer<vtkGenericCell>::New();
-    tlData.LastCell = vtkSmartPointer<vtkGenericCell>::New();
     tlData.Weights.resize(static_cast<size_t>(this->MaxCellSize));
     tlData.LastCellId = -1;
   }
@@ -475,22 +467,17 @@ public:
     // thread local data
     auto& tlData = this->TLData.Local();
     auto& strategy = tlData.Strategy;
-    auto& cellLocatorStrategy = tlData.CellLocatorStrategy;
-    auto& closestPointStrategy = tlData.ClosestPointStrategy;
     auto& currentCell = tlData.CurrentCell;
-    auto& lastCell = tlData.LastCell;
     auto weights = tlData.Weights.data();
     auto& lastPCoords = tlData.LastPCoords;
     auto& lastSubId = tlData.LastSubId;
     auto& lastClosestPoint = tlData.LastClosestPoint;
-    auto& lastBBox = tlData.LastBBox;
     auto& lastLength2 = tlData.LastLength2;
     auto& lastCellId = tlData.LastCellId;
     // local data
-    double x[3], dist2 = 0.0;
-    vtkIdType closestPointFound;
+    double x[3], dist2 = 0;
+    vtkIdType newCellId;
     int inside;
-    bool foundInCache, insideCellBounds;
     bool isFirst = vtkSMPTools::GetSingleThread();
     vtkIdType checkAbortInterval = std::min((endPointId - beginPointId) / 10 + 1, (vtkIdType)1000);
 
@@ -518,104 +505,56 @@ public:
       // Get the xyz coordinate of the point in the input dataset
       this->Input->GetPoint(pointId, x);
 
-      foundInCache = false;
-      if (lastCellId != -1)
-      {
-        // check if it's inside cell bounds
-        insideCellBounds = lastBBox.ContainsPoint(x);
-        if (insideCellBounds)
-        {
-          // Use cache cell only if point is inside
-          inside = currentCell->EvaluatePosition(
-            x, lastClosestPoint, lastSubId, lastPCoords, dist2, weights);
-          if (inside == 1)
-          {
-            foundInCache = true;
-          }
-        }
-      }
-      if (!foundInCache)
+      vtkCell* lastCell = lastCellId != -1 ? currentCell->GetRepresentativeCell() : nullptr;
+      if (strategy)
       {
         // strategies are used for subclasses of vtkPointSet
-        if (strategy)
+        newCellId = strategy->FindCell(
+          x, lastCell, currentCell, lastCellId, this->Tol2, lastSubId, lastPCoords, weights);
+      }
+      else
+      {
+        // the classes that do not use a strategy are vtkImageData, vtkRectilinearGrid
+        newCellId = this->Source->FindCell(
+          x, lastCell, currentCell, lastCellId, this->Tol2, lastSubId, lastPCoords, weights);
+      }
+      if (newCellId != -1)
+      {
+        // pcoords, weights and subId are all valid, so we can compute the closest point
+        // using EvaluateLocation
+        currentCell->EvaluateLocation(lastSubId, lastPCoords, lastClosestPoint, weights);
+        // also compute distance
+        dist2 = vtkMath::Distance2BetweenPoints(x, lastClosestPoint);
+        if (newCellId != lastCellId)
         {
-          if (cellLocatorStrategy)
-          {
-            // this location strategy uses a cell locator
-            lastCellId = cellLocatorStrategy->FindCell(x, nullptr, currentCell, -1,
-              this->Tol2 /*not used*/, lastSubId, lastPCoords, weights);
-            // this strategy once it finds a cell where the given point is inside it stops
-            // immediately, so currentCell contains the cell we want
-          }
-          else // vtkClosestPointStrategy
-          {
-            // this location strategy will first look at the neighbor cells of the cached cell (if
-            // any) and if that fails it will use jump and walk technique
-            if (lastCellId != -1)
-            {
-              // Use cache cell only if point is inside
-              this->Source->GetCell(lastCellId, lastCell);
-              lastCellId = closestPointStrategy->FindCell(
-                x, lastCell, currentCell, lastCellId, this->Tol2, lastSubId, lastPCoords, weights);
-            }
-            else
-            {
-              lastCellId = closestPointStrategy->FindCell(
-                x, nullptr, currentCell, -1, this->Tol2, lastSubId, lastPCoords, weights);
-            }
-            // this strategy once it finds a cell where the given point is inside it stops
-            // immediately, so currentCell contains the cell we want
-          }
-        }
-        else
-        {
-          // the classes that do not use a strategy are vtkImageData, vtkRectilinearGrid
-          lastCellId = this->Source->FindCell(
-            x, nullptr, currentCell, -1, this->Tol2, lastSubId, lastPCoords, weights);
-          // these classes don't use currentCell, so we will need to extract it if we found anything
-        }
-        if (lastCellId != -1)
-        {
-          // extract the cell that we found if we didn't use a strategy
-          if (!strategy)
-          {
-            this->Source->GetCell(lastCellId, currentCell);
-          }
-          // pcoords, weights and subid are all valid, so we can compute the closest point
-          // using EvaluateLocation
-          currentCell->EvaluateLocation(lastSubId, lastPCoords, lastClosestPoint, weights);
-          // also compute distance
-          dist2 = vtkMath::Distance2BetweenPoints(x, lastClosestPoint);
-          // copy bounds
-          lastBBox.SetBounds(currentCell->GetBounds());
           // compute lastLength2
-          lastLength2 = lastBBox.GetDiagonalLength2();
+          lastLength2 = currentCell->GetLength2();
+          lastCellId = newCellId;
         }
-        else
+      }
+      else
+      {
+        lastCellId = -1;
+        if (this->ProbeFilter->SnapToCellWithClosestPoint && strategy)
         {
-          if (this->ProbeFilter->SnapToCellWithClosestPoint && strategy)
-          {
-            // Find the closest point and the cell that it belong to
-            constexpr double snappingRadius = std::numeric_limits<double>::infinity();
-            closestPointFound = strategy->FindClosestPointWithinRadius(x, snappingRadius,
+          // Find the closest point within the snapping radius and the cell that it belong to
+          vtkIdType closestPointFound =
+            strategy->FindClosestPointWithinRadius(x, this->ProbeFilter->SnappingRadius,
               lastClosestPoint, currentCell, lastCellId, lastSubId, dist2, inside);
-            if (closestPointFound)
-            {
-              // pcoords, weights and subid are all valid, so we can compute the closest point
-              // using EvaluateLocation
-              this->Source->GetCell(lastCellId, currentCell);
-              // we don't need to calculate the closest point, but we do need to calculate the
-              // weights
-              currentCell->EvaluateLocation(lastSubId, lastPCoords, lastClosestPoint, weights);
-              // copy bounds
-              lastBBox.SetBounds(currentCell->GetBounds());
-              // compute lastLength2
-              lastLength2 = lastBBox.GetDiagonalLength2();
-            }
-            else
-            {
-              lastCellId = -1;
-            }
+          if (closestPointFound)
+          {
+            // Previously computed lastPCoords are not valid, so that we need to compute
+            // them and the weights from the lastClosestPoint.
+            currentCell->EvaluatePosition(
+              lastClosestPoint, nullptr, lastSubId, lastPCoords, dist2, weights);
+            // The use of the nullptr avoids the unnecessary recalculation of the closest point
+            // and set dist2 to zero, making it to be always accepted for any tolerance.
+            // compute lastLength2
+            lastLength2 = currentCell->GetLength2();
+          }
+          else
+          {
+            lastCellId = -1;
           }
         }
       }
@@ -672,19 +611,11 @@ void vtkProbeFilter::ProbeEmptyPoints(
 
   if (this->ComputeTolerance)
   {
-    // to compute a reasonable starting tolerance we use
-    // a fraction of the largest cell length we come across
-    // out of the first few cells. Tolerance is meant
-    // to be an epsilon for cases such as probing 2D
-    // cells where the XYZ may be a tad off the surface
-    // but "close enough"
-    double sLength2 = 0;
-    for (vtkIdType i = 0; i < 20 && i < source->GetNumberOfCells(); i++)
-    {
-      double cLength2 = source->GetCell(i)->GetLength2();
-      sLength2 = std::max(sLength2, cLength2);
-    }
-    // use 1% of the diagonal (1% has to be squared)
+    // To compute a reasonable starting tolerance we use a fraction of the largest cell length
+    // we come across after sampling 100 cells. Tolerance is meant to be an epsilon for cases,
+    // such as probing 2D cells where the XYZ may be a tad off the surface but "close enough".
+    double sLength2 = source->GetSampledMaxCellLength2(100);
+    // use 0.1% of the diagonal (CELL_TOLERANCE_FACTOR_SQR = 1e-6, since 0.1% has to be squared)
     tol2 = sLength2 * CELL_TOLERANCE_FACTOR_SQR;
   }
   else
