@@ -278,6 +278,18 @@ void vtkCocoaRenderWindow::DestroyWindow()
   [server stopObservations];
   this->SetCocoaServer(nullptr);
 
+  // If we created a vtkCocoaGLView, clear its reference back to us. The view
+  // may outlive this object (the closed NSWindow is released later), and the
+  // destructor cannot clear the reference after ViewCreated is reset below.
+  if (this->GetViewCreated())
+  {
+    NSView* glView = (NSView*)this->GetWindowId();
+    if ([glView isKindOfClass:[vtkCocoaGLView class]])
+    {
+      [(vtkCocoaGLView*)glView setVTKRenderWindow:nullptr];
+    }
+  }
+
   // If we created it, close the NSWindow.
   if (this->WindowCreated)
   {
